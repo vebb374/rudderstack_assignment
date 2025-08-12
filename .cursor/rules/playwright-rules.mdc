@@ -1,0 +1,446 @@
+---
+alwaysApply: true
+---
+
+# Playwright Rules and Best Practices
+
+## Locator Strategy and Selector Best Practices
+
+### 1. Locator Priority (Most to Least Preferred)
+1. **Accessibility attributes** (preferred)
+   - Role: `page.getByRole('button', { name: 'Login' })`
+   - Label: `page.getByLabel('Email')`
+   - Text: `page.getByText('Welcome to Dashboard')`
+
+2. **Test attributes** (when accessibility attributes are not available)
+   - Data attributes: `page.getByTestId("login-form")`
+   - ARIA attributes: `page.locator('[aria-label="Close modal"]')`
+
+3. **CSS selectors** (use when options 1 and 2 aren't available)
+   - Class: `page.locator('.submit-button')`
+   - Combination: `page.locator('.modal-header .close-button')`
+
+4. **XPath** (last resort, use only when necessary)
+   - `page.locator('//div[contains(@class,"dynamic-content")]')`
+
+### 2. Advanced Locator Techniques
+
+#### Chaining and Filtering
+```typescript
+// ✅ GOOD - Use filtering for robustness
+await page.locator('button').filter({ hasText: 'Submit' }).click();
+await page.getByRole('row').filter({ hasText: 'John Doe' }).getByRole('button').click();
+
+// ✅ GOOD - Combine selectors for precision
+await page.getByRole('button').and(page.getByText('Login')).click();
+```
+
+#### Context-Aware Selectors
+```typescript
+// ✅ GOOD - Scope selectors to parent elements
+const modal = page.locator('.modal');
+const submitButton = modal.getByRole('button', { name: 'Submit' });
+
+// ✅ GOOD - Use has() for complex filtering
+await page.getByRole('alert').filter({ has: page.getByText('Invalid email') });
+```
+
+#### Locator Strictness and Auto-Waiting
+```typescript
+// ✅ GOOD - Strict locator (errors if >1 match)
+const button = page.getByRole('button', { name: 'Submit' });
+
+// ✅ GOOD - Handling multiples explicitly when needed
+const firstButton = page.getByRole('button', { name: 'Submit' }).first();
+
+// ❌ AVOID - Brittle positional selectors
+await page.locator('#app > div > form > button:nth-child(3)').click();
+await page.locator('tr').nth(2).click(); // breaks if order changes
+```
+
+### 3. Selector Best Practices
+- **Be specific but flexible**: Avoid overly specific selectors that break with minor changes
+- **Filter when needed**: Use `filter()` to narrow down selection
+- **Avoid selectors based on position**: Don't rely on `nth-child` or similar positional selectors
+- **Test locators in Playwright inspector**: Verify locators work correctly during development
+
+## Page Object Model Rules
+
+### 1. Page Object Structure Principles
+- Each page object should represent a single page or component
+- **Always declare locators as readonly** since they will be used for assertions in step definitions
+- Use **public readonly properties for locators** to enable assertions in Cucumber steps
+- Implement methods that represent user actions and business workflows
+- Return appropriate types (void for actions, data types for getters)
+- Keep page objects focused on UI interactions, not business logic
+
+### 2. Enhanced Page Object Pattern
+```typescript
+export class LoginPage {
+  readonly page: Page;
+  // ✅ GOOD - Public readonly locators for step definitions
+  readonly emailInput: Locator;
+  readonly passwordInput: Locator;
+  readonly loginButton: Locator;
+  readonly errorMessage: Locator;
+  readonly successMessage: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    // ✅ GOOD - Initialize locators in constructor
+    this.emailInput = page.getByLabel('Email');
+    this.passwordInput = page.getByLabel('Password');
+    this.loginButton = page.getByRole('button', { name: 'Login' });
+    this.errorMessage = page.locator('.error-message');
+    this.successMessage = page.getByText('Login successful');
+  }
+
+  async navigate(url: string): Promise<void> {
+    await this.page.goto(url);
+    await this.page.waitForLoadState('domcontentloaded');
+  }
+
+  async login(email: string, password: string): Promise<void> {
+    await this.emailInput.fill(email);
+    await this.passwordInput.fill(password);
+    await this.loginButton.click();
+  }
+
+  async getErrorText(): Promise<string | null> {
+    return await this.errorMessage.textContent();
+  }
+}
+```
+
+### 3. Locator Declaration Best Practices
+```typescript
+// ✅ GOOD - Meaningful locator names with type suffixes
+readonly submitButton: Locator;
+readonly emailInput: Locator;
+readonly userDropdown: Locator;
+readonly dataTable: Locator;
+
+// ✅ GOOD - Plurals for collections
+readonly removeButtons: Locator;
+readonly tableRows: Locator;
+
+// ✅ GOOD - Boolean methods for state checking
+async isEmailErrorVisible(): Promise<boolean> {
+  return await this.errorMessage.isVisible();
+}
+
+async hasSuccessMessage(): Promise<boolean> {
+  return await this.successMessage.isVisible();
+}
+```
+
+### 4. Component Composition
+For complex pages, break them into logical components. When a page has multiple distinct sections (like tabs, modals, or complex forms), you can organize these into their own component classes. For very complex pages, you can even place these component files into their own subdirectories as defined in the project structure rules.
+
+```typescript
+// ✅ GOOD - Compose complex pages from components
+export class DashboardPage {
+  readonly page: Page;
+  readonly pageTitle: Locator;
+  
+  // Child components
+  readonly navigation: NavigationComponent;
+  readonly dataSource: DataSourceComponent;
+  
+  constructor(page: Page) {
+    this.page = page;
+    this.pageTitle = page.getByRole('heading', { name: 'Dashboard' });
+    
+    // Initialize child components
+    this.navigation = new NavigationComponent(page);
+    this.dataSource = new DataSourceComponent(page);
+  }
+}
+
+export class NavigationComponent {
+  readonly container: Locator;
+  readonly settingsLink: Locator;
+  readonly profileLink: Locator;
+  
+  constructor(page: Page) {
+    this.container = page.locator('.navigation');
+    this.settingsLink = this.container.getByRole('link', { name: 'Settings' });
+    this.profileLink = this.container.getByRole('link', { name: 'Profile' });
+  }
+}
+```
+
+### 5. Base Page for Reusability
+Use base pages to abstract common functionality and locators. This is particularly useful for elements that appear across multiple pages or components, such as headers, footers, or navigation bars. Base pages can also be hierarchical (a base page for a feature area inheriting from a global base page).
+
+```typescript
+// ✅ GOOD - A base page for shared components
+export abstract class BasePage {
+  readonly page: Page;
+  readonly header: Locator;
+  readonly footer: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.header = page.locator('header');
+    this.footer = page.locator('footer');
+  }
+
+  async goBack() {
+    await this.page.goBack();
+  }
+}
+
+// A specific page inheriting from the base page
+export class HomePage extends BasePage {
+  readonly welcomeMessage: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.welcomeMessage = page.getByText('Welcome');
+  }
+}
+```
+
+## Waiting and Timing Rules
+
+### 1. Use Built-in Waits (Preferred)
+```typescript
+// ✅ GOOD - Built-in waiting with auto-retry
+await page.waitForLoadState('networkidle');
+await page.waitForLoadState('domcontentloaded');
+await expect(page.locator('h1')).toBeVisible();
+await expect(page.locator('.content')).toBeAttached();
+
+// ✅ GOOD - Wait for specific conditions
+await page.waitForSelector('.content', { state: 'visible' });
+await page.waitForResponse(res => res.url().includes('/api/data') && res.status() === 200);
+
+// ❌ AVOID - Fixed delays (brittle and slow)
+await page.waitForTimeout(5000);
+```
+
+### 2. Smart Polling for Dynamic Content
+```typescript
+// ✅ GOOD - Smart polling with timeout and clear logic
+await page.waitForFunction(
+  () => {
+    const element = document.querySelector('.event-count');
+    return element && parseInt(element.textContent!) > 0;
+  },
+  { timeout: 30000, polling: 1000 }
+);
+
+// ✅ GOOD - Wait for element state changes
+await page.locator('.loading-spinner').waitFor({ state: 'hidden' });
+await page.locator('.data-table').waitFor({ state: 'visible' });
+```
+
+### 3. Assertions with Built-in Waiting
+```typescript
+// ✅ GOOD - Assertions automatically wait
+await expect(page.locator('.error-message')).toHaveText('Invalid email');
+await expect(page.locator('.success-banner')).toBeVisible({ timeout: 10000 });
+await expect(page.locator('[data-testid="user-count"]')).toHaveText(/\d+ users/);
+
+// ✅ GOOD - Multiple assertions that wait independently
+await expect(page.locator('.form')).toBeVisible();
+await expect(page.locator('.submit-button')).toBeEnabled();
+```
+
+## Browser and Context Management
+
+### 1. Browser Lifecycle
+- Create fresh browser context for each test scenario
+- Close browsers properly in cleanup hooks
+- Use headless mode in CI, headed mode for debugging
+
+### 2. Context Configuration
+```typescript
+// ✅ GOOD - Proper context setup
+const context = await browser.newContext({
+  viewport: { width: 1280, height: 720 },
+  permissions: ['notifications'],
+  recordVideo: { dir: 'test-results/videos' }
+});
+```
+
+## Error Handling and Debugging
+
+### 1. Screenshots and Videos
+- Capture screenshots on failure
+- Enable video recording for debugging
+- Use trace recording for complex scenarios
+
+### 2. Error Context
+```typescript
+// ✅ GOOD - Provide context in assertions
+await expect(page.locator('.error-message')).toHaveText(
+  'Invalid credentials',
+  { timeout: 10000 }
+);
+```
+
+## Network and API Integration
+
+### 1. API Calls
+- Use Playwright's request context for API calls
+- Separate API logic from UI logic
+- Handle authentication properly
+
+### 2. Network Mocking
+```typescript
+// ✅ GOOD - Mock external dependencies
+await page.route('**/api/data', route => {
+  route.fulfill({
+    status: 200,
+    body: JSON.stringify({ message: 'mocked response' })
+  });
+});
+```
+
+## Performance Guidelines
+
+### 1. Test Optimization
+- Minimize page loads by reusing authentication state
+- Use parallel execution where tests are independent
+- Clean up test data after each test
+
+### 2. Resource Management
+- Close unnecessary tabs and contexts
+- Limit the number of concurrent browser instances
+- Use efficient locators that don't scan the entire DOM
+
+## Security Considerations
+
+### 1. Test Data
+- Use test-specific accounts and data
+- Clean up sensitive test data after tests
+- Never use production credentials in tests
+
+### 2. Network Security
+- Be cautious with network interception
+- Validate SSL certificates in production-like environments
+- Use secure protocols for test communications
+
+## Naming Conventions and Organization
+
+### 1. File Naming Conventions
+- Use kebab-case for file names: `login.page.ts`, `dashboard.steps.ts`
+- Use descriptive names that indicate the file's purpose
+- Page object files should end with `.page.ts`
+- Step definition files should end with `.steps.ts`
+- Feature files should end with `.feature`
+
+### 2. Class and Method Naming
+```typescript
+// ✅ GOOD - Class naming with PascalCase
+export class LoginPage {
+  // ✅ GOOD - Method naming with camelCase and clear intent
+  async navigateToLogin(): Promise<void> { ... }
+  async fillCredentials(email: string, password: string): Promise<void> { ... }
+  async submitForm(): Promise<void> { ... }
+  
+  // ✅ GOOD - Boolean methods with clear prefixes
+  async isErrorVisible(): Promise<boolean> { ... }
+  async hasValidationMessage(): Promise<boolean> { ... }
+}
+```
+
+### 3. Locator Naming Best Practices
+```typescript
+// ✅ GOOD - Descriptive names with element type suffixes
+readonly emailInput: Locator;
+readonly passwordInput: Locator;
+readonly submitButton: Locator;
+readonly errorMessage: Locator;
+readonly loadingSpinner: Locator;
+
+// ✅ GOOD - Use plurals for collections
+readonly tableRows: Locator;
+readonly navigationLinks: Locator;
+readonly formFields: Locator;
+```
+
+## Integration with Cucumber Steps
+
+### 1. Using Page Objects in Step Definitions
+```typescript
+// ✅ GOOD - Access page object locators in step definitions
+Given('the user is on the login page', async function (this: ICustomWorld) {
+  await this.loginPage!.navigate('/login');
+  await expect(this.loginPage!.pageTitle).toBeVisible();
+});
+
+When('the user enters valid credentials', async function (this: ICustomWorld) {
+  await this.loginPage!.fillCredentials('user@example.com', 'password');
+});
+
+Then('the user should see an error message', async function (this: ICustomWorld) {
+  await expect(this.loginPage!.errorMessage).toBeVisible();
+  await expect(this.loginPage!.errorMessage).toHaveText('Invalid credentials');
+});
+```
+
+### 2. Page Object Method Design for BDD
+```typescript
+// ✅ GOOD - Methods that map well to Gherkin steps
+export class LoginPage {
+  // Maps to: "When the user logs in with valid credentials"
+  async loginWithValidCredentials(): Promise<void> {
+    await this.fillCredentials('valid@email.com', 'validpassword');
+    await this.submitForm();
+  }
+  
+  // Maps to: "When the user attempts to login with invalid credentials"
+  async attemptLoginWithInvalidCredentials(): Promise<void> {
+    await this.fillCredentials('invalid@email.com', 'wrongpassword');
+    await this.submitForm();
+  }
+  
+  // Maps to: "Then the user should see the welcome message"
+  async waitForWelcomeMessage(): Promise<void> {
+    await expect(this.welcomeMessage).toBeVisible();
+  }
+}
+```
+
+## Test Data Management in Page Objects
+
+### 1. Separate Data from Page Logic
+```typescript
+// ✅ GOOD - Keep test data separate
+// In login.data.ts
+export const validCredentials = {
+  email: 'test@example.com',
+  password: 'validpassword'
+};
+
+export const invalidCredentials = {
+  email: 'invalid@example.com',
+  password: 'wrongpassword'
+};
+
+// In step definitions
+import { validCredentials, invalidCredentials } from './login.data';
+
+When('the user enters valid credentials', async function (this: ICustomWorld) {
+  await this.loginPage!.fillCredentials(validCredentials.email, validCredentials.password);
+});
+```
+
+### 2. Dynamic Data Generation
+```typescript
+// ✅ GOOD - Generate unique data to avoid conflicts
+export class LoginPage {
+  async createTestUser(): Promise<UserCredentials> {
+    const timestamp = Date.now();
+    return {
+      email: `test.user.${timestamp}@example.com`,
+      password: `password${timestamp}`,
+      firstName: 'Test',
+      lastName: 'User'
+    };
+  }
+}
+```

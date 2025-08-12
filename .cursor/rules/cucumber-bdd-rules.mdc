@@ -1,0 +1,800 @@
+---
+alwaysApply: true
+---
+
+# Cucumber BDD Rules and Guidelines
+
+## Feature File Writing Guidelines
+
+### 1. Feature Structure
+- Each feature file should focus on a single business capability
+- Use clear, descriptive feature titles
+- Include a brief description of what the feature does
+- Group related scenarios logically
+
+### 2. Feature File Template
+```gherkin
+Feature: [Business Capability Name]
+  
+  [Optional: Brief description of the feature's purpose]
+  
+  Background:
+    [Common setup steps for all scenarios]
+  
+  Scenario: [Descriptive scenario name]
+    Given [initial context]
+    When [action performed]
+    Then [expected outcome]
+    And [additional expectations]
+```
+
+### 3. Scenario Writing Best Practices
+
+#### Use Business Language
+```gherkin
+# ✅ GOOD - Business focused
+Scenario: User successfully logs in with valid credentials
+  Given the user is on the login page
+  When the user enters valid credentials
+  Then the user should be redirected to the dashboard
+
+# ❌ AVOID - Technical implementation details
+Scenario: Login form validation
+  Given the browser navigates to "/login"
+  When the user fills input[name="email"] with "test@example.com"
+  Then the URL should contain "/dashboard"
+```
+
+#### Keep Scenarios Independent
+```gherkin
+# ✅ GOOD - Self-contained scenario
+Scenario: View account balance
+  Given the user is logged in
+  And the user has an account with balance $100
+  When the user views their account
+  Then the balance should show $100
+
+# ❌ AVOID - Dependent on previous scenarios
+Scenario: View account balance after previous login
+  When the user views their account
+  Then the balance should show $100
+```
+
+## Step Definition Guidelines
+
+### 1. Step Definition Structure
+- Use descriptive step names that match business language
+- Keep step definitions atomic and focused
+- Implement proper error handling
+- Use the custom world for sharing state
+
+### 2. Step Definition Best Practices
+
+#### Parameterized Steps
+```typescript
+// ✅ GOOD - Reusable parameterized step
+Given('the user enters {string} in the {string} field', 
+  async function (this: ICustomWorld, value: string, fieldName: string) {
+    await this.page!.fill(`[data-testid="${fieldName}"]`, value);
+  }
+);
+
+// ❌ AVOID - Too many specific steps
+Given('the user enters email in the email field', async function() { ... });
+Given('the user enters password in the password field', async function() { ... });
+```
+
+#### Proper Assertions
+```typescript
+// ✅ GOOD - Clear, specific assertions
+Then('the user should see the error message {string}', 
+  async function (this: ICustomWorld, expectedMessage: string) {
+    const errorElement = this.page!.locator('.error-message');
+    await expect(errorElement).toBeVisible();
+    await expect(errorElement).toHaveText(expectedMessage);
+  }
+);
+```
+
+### 3. World Context Usage
+```typescript
+// ✅ GOOD - Using world context to share data
+Given('the user has captured the initial event count', 
+  async function (this: ICustomWorld) {
+    this.initialEventCount = await this.destinationPage!.getDeliveredEventsCount();
+  }
+);
+
+Then('the event count should increase by {int}', 
+  async function (this: ICustomWorld, increase: number) {
+    const newCount = await this.destinationPage!.getDeliveredEventsCount();
+    expect(newCount).toBe(this.initialEventCount! + increase);
+  }
+);
+```
+
+## Gherkin Language Rules
+
+### 1. Step Keywords Usage
+- **Given**: Use for setting up initial context or preconditions
+- **When**: Use for actions that trigger the behavior being tested
+- **Then**: Use for assertions and expected outcomes
+- **And/But**: Use to continue the previous step type
+
+### 2. Writing Clear Steps
+
+#### Use Present Tense
+```gherkin
+# ✅ GOOD
+Given the user is on the login page
+When the user clicks the submit button
+Then the user sees a success message
+
+# ❌ AVOID
+Given the user was on the login page
+When the user will click the submit button
+Then the user should have seen a success message
+```
+
+#### Avoid Technical Implementation
+```gherkin
+# ✅ GOOD - Business language
+When the user submits the login form
+Then the user should be logged in
+
+# ❌ AVOID - Technical details
+When the user clicks button[data-testid="submit"]
+Then the localStorage should contain "authToken"
+```
+
+## Background and Scenario Outline Rules
+
+### 1. Background Usage
+- Use Background for common setup steps
+- Keep Background steps minimal and focused
+- Ensure Background steps are relevant to ALL scenarios in the feature
+
+### 2. Scenario Outline Usage
+```gherkin
+# ✅ GOOD - Multiple data sets for the same behavior
+Scenario Outline: Login with invalid credentials
+  Given the user is on the login page
+  When the user enters "<email>" and "<password>"
+  Then the user should see the error "<error_message>"
+
+  Examples:
+    | email           | password  | error_message      |
+    | invalid@test.com| wrongpass | Invalid credentials|
+    | test@test.com   | short     | Password too short |
+```
+
+## Feature Organization Rules
+
+### 1. Feature File Naming
+- Use descriptive names that reflect business capabilities
+- Use kebab-case for file names (e.g., `user-authentication.feature`)
+- Group related features in appropriate directories
+
+### 2. Feature File Size
+- Keep feature files focused and reasonably sized (5-15 scenarios)
+- Split large features into smaller, more focused features
+- Ensure each feature has a clear, single responsibility
+
+### 3. Tag Strategy
+```gherkin
+@smoke @authentication
+Feature: User Authentication
+
+  @critical
+  Scenario: Successful login with valid credentials
+    # ... steps ...
+
+  @regression
+  Scenario: Login with invalid credentials
+    # ... steps ...
+```
+
+## Data Management in BDD
+
+### 1. Test Data Strategy
+- Use meaningful, realistic test data
+- Avoid hardcoded data when possible
+- Use data tables for multiple related data points
+
+### 2. Data Tables Usage
+```gherkin
+Scenario: User registration with multiple fields
+  Given the user is on the registration page
+  When the user fills in the registration form:
+    | Field      | Value           |
+    | First Name | John            |
+    | Last Name  | Doe             |
+    | Email      | john@example.com|
+    | Phone      | 555-1234        |
+  Then the user should be registered successfully
+```
+
+## Reporting and Debugging
+
+### 1. Error Context
+- Include sufficient context in step failures
+- Use descriptive assertion messages
+- Capture screenshots on failure for visual verification
+
+### 2. Step Documentation
+```typescript
+// ✅ GOOD - Self-documenting step with clear purpose
+When('the user waits for the event to be processed', 
+  async function (this: ICustomWorld) {
+    // Wait up to 90 seconds for event processing
+    // This accounts for potential network delays and processing time
+    await this.destinationPage!.waitForEventCount(this.initialEventCount! + 1);
+  }
+);
+```
+
+## Advanced Step Definition Patterns
+
+### 1. Reusable Step Components
+```typescript
+// ✅ GOOD - Create reusable step building blocks
+// features/shared/step-components.ts
+export class StepComponents {
+  constructor(private world: ICustomWorld) {}
+  
+  async navigateToPage(pageName: string): Promise<void> {
+    const page = this.world.getPage();
+    
+    switch (pageName.toLowerCase()) {
+      case 'login':
+        if (!this.world.loginPage) {
+          this.world.loginPage = new LoginPage(page);
+        }
+        await this.world.loginPage.navigate('/login');
+        break;
+      case 'dashboard':
+        if (!this.world.dashboardPage) {
+          this.world.dashboardPage = new DashboardPage(page);
+        }
+        await this.world.dashboardPage.navigate('/dashboard');
+        break;
+      default:
+        throw new Error(`Unknown page: ${pageName}`);
+    }
+  }
+  
+  async fillForm(formData: Record<string, string>): Promise<void> {
+    for (const [field, value] of Object.entries(formData)) {
+      const input = this.world.page!.getByLabel(field);
+      await input.fill(value);
+    }
+  }
+}
+
+// Use in step definitions
+Given('the user is on the {string} page', async function (this: ICustomWorld, pageName: string) {
+  const stepComponents = new StepComponents(this);
+  await stepComponents.navigateToPage(pageName);
+});
+```
+
+### 2. Step Definition Organization by Domain
+```typescript
+// ✅ GOOD - Organize steps by domain, not by page
+// features/shared/navigation.steps.ts
+Given('the user is on the {string} page', async function (this: ICustomWorld, pageName: string) {
+  // Navigation logic
+});
+
+When('the user navigates to {string}', async function (this: ICustomWorld, url: string) {
+  // Navigation logic
+});
+
+// features/shared/form-interactions.steps.ts
+When('the user fills the {string} field with {string}', 
+  async function (this: ICustomWorld, fieldName: string, value: string) {
+    // Form interaction logic
+  }
+);
+
+When('the user submits the form', async function (this: ICustomWorld) {
+  // Form submission logic
+});
+
+// features/shared/assertions.steps.ts
+Then('the user should see {string}', async function (this: ICustomWorld, text: string) {
+  // Assertion logic
+});
+
+Then('the {string} should be visible', async function (this: ICustomWorld, element: string) {
+  // Element visibility assertion
+});
+```
+
+## Advanced Data Management
+
+### 1. Dynamic Test Data with Context
+```typescript
+// ✅ GOOD - Context-aware test data generation
+// features/shared/test-data-context.ts
+export class TestDataContext {
+  private static instance: TestDataContext;
+  private testRunId: string;
+  private createdUsers: Map<string, UserProfile> = new Map();
+  
+  constructor() {
+    this.testRunId = `test_${Date.now()}`;
+  }
+  
+  static getInstance(): TestDataContext {
+    if (!TestDataContext.instance) {
+      TestDataContext.instance = new TestDataContext();
+    }
+    return TestDataContext.instance;
+  }
+  
+  createUniqueUser(role: UserRole = 'user'): UserProfile {
+    const userKey = `${role}_${this.createdUsers.size}`;
+    const user = {
+      email: `${userKey}.${this.testRunId}@example.com`,
+      password: 'TestPassword123!',
+      firstName: 'Test',
+      lastName: 'User',
+      role,
+      permissions: []
+    };
+    
+    this.createdUsers.set(userKey, user);
+    return user;
+  }
+  
+  getCreatedUser(userKey: string): UserProfile | undefined {
+    return this.createdUsers.get(userKey);
+  }
+}
+
+// Use in step definitions
+Given('a new {string} user exists', async function (this: ICustomWorld, role: UserRole) {
+  const testData = TestDataContext.getInstance();
+  this.currentUser = testData.createUniqueUser(role);
+});
+```
+
+### 2. Environment-Aware Step Definitions
+```typescript
+// ✅ GOOD - Environment-specific behavior
+Given('the user has valid credentials for {string} environment', 
+  async function (this: ICustomWorld, environment: string) {
+    const credentials = getEnvironmentCredentials(environment);
+    this.testCredentials = credentials;
+  }
+);
+
+When('the user performs API operation in {string} environment', 
+  async function (this: ICustomWorld, environment: string) {
+    const apiUrl = getEnvironmentConfig(environment).apiUrl;
+    // Use environment-specific API URL
+  }
+);
+```
+
+## Enhanced Error Handling and Debugging
+
+### 1. Rich Error Context
+```typescript
+// ✅ GOOD - Provide rich error context
+Then('the user should see the success message', async function (this: ICustomWorld) {
+  try {
+    await expect(this.page!.locator('.success-message')).toBeVisible({ timeout: 10000 });
+  } catch (error) {
+    // Capture additional context for debugging
+    const pageUrl = this.page!.url();
+    const pageTitle = await this.page!.title();
+    
+    throw new Error(
+      `Expected success message to be visible but it wasn't.\n` +
+      `Current page: ${pageUrl}\n` +
+      `Page title: ${pageTitle}\n` +
+      `Original error: ${error.message}`
+    );
+  }
+});
+```
+# Cucumber BDD Rules and Guidelines
+
+## Feature File Writing Guidelines
+
+### 1. Feature Structure
+- Each feature file should focus on a single business capability
+- Use clear, descriptive feature titles
+- Include a brief description of what the feature does
+- Group related scenarios logically
+
+### 2. Feature File Template
+```gherkin
+Feature: [Business Capability Name]
+  
+  [Optional: Brief description of the feature's purpose]
+  
+  Background:
+    [Common setup steps for all scenarios]
+  
+  Scenario: [Descriptive scenario name]
+    Given [initial context]
+    When [action performed]
+    Then [expected outcome]
+    And [additional expectations]
+```
+
+### 3. Scenario Writing Best Practices
+
+#### Use Business Language
+```gherkin
+# ✅ GOOD - Business focused
+Scenario: User successfully logs in with valid credentials
+  Given the user is on the login page
+  When the user enters valid credentials
+  Then the user should be redirected to the dashboard
+
+# ❌ AVOID - Technical implementation details
+Scenario: Login form validation
+  Given the browser navigates to "/login"
+  When the user fills input[name="email"] with "test@example.com"
+  Then the URL should contain "/dashboard"
+```
+
+#### Keep Scenarios Independent
+```gherkin
+# ✅ GOOD - Self-contained scenario
+Scenario: View account balance
+  Given the user is logged in
+  And the user has an account with balance $100
+  When the user views their account
+  Then the balance should show $100
+
+# ❌ AVOID - Dependent on previous scenarios
+Scenario: View account balance after previous login
+  When the user views their account
+  Then the balance should show $100
+```
+
+## Step Definition Guidelines
+
+### 1. Step Definition Structure
+- Use descriptive step names that match business language
+- Keep step definitions atomic and focused
+- Implement proper error handling
+- Use the custom world for sharing state
+
+### 2. Step Definition Best Practices
+
+#### Parameterized Steps
+```typescript
+// ✅ GOOD - Reusable parameterized step
+Given('the user enters {string} in the {string} field', 
+  async function (this: ICustomWorld, value: string, fieldName: string) {
+    await this.page!.fill(`[data-testid="${fieldName}"]`, value);
+  }
+);
+
+// ❌ AVOID - Too many specific steps
+Given('the user enters email in the email field', async function() { ... });
+Given('the user enters password in the password field', async function() { ... });
+```
+
+#### Proper Assertions
+```typescript
+// ✅ GOOD - Clear, specific assertions
+Then('the user should see the error message {string}', 
+  async function (this: ICustomWorld, expectedMessage: string) {
+    const errorElement = this.page!.locator('.error-message');
+    await expect(errorElement).toBeVisible();
+    await expect(errorElement).toHaveText(expectedMessage);
+  }
+);
+```
+
+### 3. World Context Usage
+```typescript
+// ✅ GOOD - Using world context to share data
+Given('the user has captured the initial event count', 
+  async function (this: ICustomWorld) {
+    this.initialEventCount = await this.destinationPage!.getDeliveredEventsCount();
+  }
+);
+
+Then('the event count should increase by {int}', 
+  async function (this: ICustomWorld, increase: number) {
+    const newCount = await this.destinationPage!.getDeliveredEventsCount();
+    expect(newCount).toBe(this.initialEventCount! + increase);
+  }
+);
+```
+
+## Gherkin Language Rules
+
+### 1. Step Keywords Usage
+- **Given**: Use for setting up initial context or preconditions
+- **When**: Use for actions that trigger the behavior being tested
+- **Then**: Use for assertions and expected outcomes
+- **And/But**: Use to continue the previous step type
+
+### 2. Writing Clear Steps
+
+#### Use Present Tense
+```gherkin
+# ✅ GOOD
+Given the user is on the login page
+When the user clicks the submit button
+Then the user sees a success message
+
+# ❌ AVOID
+Given the user was on the login page
+When the user will click the submit button
+Then the user should have seen a success message
+```
+
+#### Avoid Technical Implementation
+```gherkin
+# ✅ GOOD - Business language
+When the user submits the login form
+Then the user should be logged in
+
+# ❌ AVOID - Technical details
+When the user clicks button[data-testid="submit"]
+Then the localStorage should contain "authToken"
+```
+
+## Background and Scenario Outline Rules
+
+### 1. Background Usage
+- Use Background for common setup steps
+- Keep Background steps minimal and focused
+- Ensure Background steps are relevant to ALL scenarios in the feature
+
+### 2. Scenario Outline Usage
+```gherkin
+# ✅ GOOD - Multiple data sets for the same behavior
+Scenario Outline: Login with invalid credentials
+  Given the user is on the login page
+  When the user enters "<email>" and "<password>"
+  Then the user should see the error "<error_message>"
+
+  Examples:
+    | email           | password  | error_message      |
+    | invalid@test.com| wrongpass | Invalid credentials|
+    | test@test.com   | short     | Password too short |
+```
+
+## Feature Organization Rules
+
+### 1. Feature File Naming
+- Use descriptive names that reflect business capabilities
+- Use kebab-case for file names (e.g., `user-authentication.feature`)
+- Group related features in appropriate directories
+
+### 2. Feature File Size
+- Keep feature files focused and reasonably sized (5-15 scenarios)
+- Split large features into smaller, more focused features
+- Ensure each feature has a clear, single responsibility
+
+### 3. Tag Strategy
+```gherkin
+@smoke @authentication
+Feature: User Authentication
+
+  @critical
+  Scenario: Successful login with valid credentials
+    # ... steps ...
+
+  @regression
+  Scenario: Login with invalid credentials
+    # ... steps ...
+```
+
+## Data Management in BDD
+
+### 1. Test Data Strategy
+- Use meaningful, realistic test data
+- Avoid hardcoded data when possible
+- Use data tables for multiple related data points
+
+### 2. Data Tables Usage
+```gherkin
+Scenario: User registration with multiple fields
+  Given the user is on the registration page
+  When the user fills in the registration form:
+    | Field      | Value           |
+    | First Name | John            |
+    | Last Name  | Doe             |
+    | Email      | john@example.com|
+    | Phone      | 555-1234        |
+  Then the user should be registered successfully
+```
+
+## Reporting and Debugging
+
+### 1. Error Context
+- Include sufficient context in step failures
+- Use descriptive assertion messages
+- Capture screenshots on failure for visual verification
+
+### 2. Step Documentation
+```typescript
+// ✅ GOOD - Self-documenting step with clear purpose
+When('the user waits for the event to be processed', 
+  async function (this: ICustomWorld) {
+    // Wait up to 90 seconds for event processing
+    // This accounts for potential network delays and processing time
+    await this.destinationPage!.waitForEventCount(this.initialEventCount! + 1);
+  }
+);
+```
+
+## Advanced Step Definition Patterns
+
+### 1. Reusable Step Components
+```typescript
+// ✅ GOOD - Create reusable step building blocks
+// features/shared/step-components.ts
+export class StepComponents {
+  constructor(private world: ICustomWorld) {}
+  
+  async navigateToPage(pageName: string): Promise<void> {
+    const page = this.world.getPage();
+    
+    switch (pageName.toLowerCase()) {
+      case 'login':
+        if (!this.world.loginPage) {
+          this.world.loginPage = new LoginPage(page);
+        }
+        await this.world.loginPage.navigate('/login');
+        break;
+      case 'dashboard':
+        if (!this.world.dashboardPage) {
+          this.world.dashboardPage = new DashboardPage(page);
+        }
+        await this.world.dashboardPage.navigate('/dashboard');
+        break;
+      default:
+        throw new Error(`Unknown page: ${pageName}`);
+    }
+  }
+  
+  async fillForm(formData: Record<string, string>): Promise<void> {
+    for (const [field, value] of Object.entries(formData)) {
+      const input = this.world.page!.getByLabel(field);
+      await input.fill(value);
+    }
+  }
+}
+
+// Use in step definitions
+Given('the user is on the {string} page', async function (this: ICustomWorld, pageName: string) {
+  const stepComponents = new StepComponents(this);
+  await stepComponents.navigateToPage(pageName);
+});
+```
+
+### 2. Step Definition Organization by Domain
+```typescript
+// ✅ GOOD - Organize steps by domain, not by page
+// features/shared/navigation.steps.ts
+Given('the user is on the {string} page', async function (this: ICustomWorld, pageName: string) {
+  // Navigation logic
+});
+
+When('the user navigates to {string}', async function (this: ICustomWorld, url: string) {
+  // Navigation logic
+});
+
+// features/shared/form-interactions.steps.ts
+When('the user fills the {string} field with {string}', 
+  async function (this: ICustomWorld, fieldName: string, value: string) {
+    // Form interaction logic
+  }
+);
+
+When('the user submits the form', async function (this: ICustomWorld) {
+  // Form submission logic
+});
+
+// features/shared/assertions.steps.ts
+Then('the user should see {string}', async function (this: ICustomWorld, text: string) {
+  // Assertion logic
+});
+
+Then('the {string} should be visible', async function (this: ICustomWorld, element: string) {
+  // Element visibility assertion
+});
+```
+
+## Advanced Data Management
+
+### 1. Dynamic Test Data with Context
+```typescript
+// ✅ GOOD - Context-aware test data generation
+// features/shared/test-data-context.ts
+export class TestDataContext {
+  private static instance: TestDataContext;
+  private testRunId: string;
+  private createdUsers: Map<string, UserProfile> = new Map();
+  
+  constructor() {
+    this.testRunId = `test_${Date.now()}`;
+  }
+  
+  static getInstance(): TestDataContext {
+    if (!TestDataContext.instance) {
+      TestDataContext.instance = new TestDataContext();
+    }
+    return TestDataContext.instance;
+  }
+  
+  createUniqueUser(role: UserRole = 'user'): UserProfile {
+    const userKey = `${role}_${this.createdUsers.size}`;
+    const user = {
+      email: `${userKey}.${this.testRunId}@example.com`,
+      password: 'TestPassword123!',
+      firstName: 'Test',
+      lastName: 'User',
+      role,
+      permissions: []
+    };
+    
+    this.createdUsers.set(userKey, user);
+    return user;
+  }
+  
+  getCreatedUser(userKey: string): UserProfile | undefined {
+    return this.createdUsers.get(userKey);
+  }
+}
+
+// Use in step definitions
+Given('a new {string} user exists', async function (this: ICustomWorld, role: UserRole) {
+  const testData = TestDataContext.getInstance();
+  this.currentUser = testData.createUniqueUser(role);
+});
+```
+
+### 2. Environment-Aware Step Definitions
+```typescript
+// ✅ GOOD - Environment-specific behavior
+Given('the user has valid credentials for {string} environment', 
+  async function (this: ICustomWorld, environment: string) {
+    const credentials = getEnvironmentCredentials(environment);
+    this.testCredentials = credentials;
+  }
+);
+
+When('the user performs API operation in {string} environment', 
+  async function (this: ICustomWorld, environment: string) {
+    const apiUrl = getEnvironmentConfig(environment).apiUrl;
+    // Use environment-specific API URL
+  }
+);
+```
+
+## Enhanced Error Handling and Debugging
+
+### 1. Rich Error Context
+```typescript
+// ✅ GOOD - Provide rich error context
+Then('the user should see the success message', async function (this: ICustomWorld) {
+  try {
+    await expect(this.page!.locator('.success-message')).toBeVisible({ timeout: 10000 });
+  } catch (error) {
+    // Capture additional context for debugging
+    const pageUrl = this.page!.url();
+    const pageTitle = await this.page!.title();
+    
+    throw new Error(
+      `Expected success message to be visible but it wasn't.\n` +
+      `Current page: ${pageUrl}\n` +
+      `Page title: ${pageTitle}\n` +
+      `Original error: ${error.message}`
+    );
+  }
+});
+```

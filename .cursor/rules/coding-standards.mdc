@@ -1,0 +1,109 @@
+---
+alwaysApply: true
+---
+# Coding Standards Rules
+
+## General Principles
+
+### 1. Code Organization
+- Follow the feature-centric directory structure
+- Keep related files (feature, steps, pages) co-located
+- Use descriptive and consistent naming conventions
+
+### 2. Naming Conventions
+- **Files**: Use kebab-case for file names (e.g., `login.page.ts`, `dashboard.steps.ts`)
+- **Classes**: Use PascalCase (e.g., `LoginPage`, `DashboardPage`)
+- **Functions/Methods**: Use camelCase (e.g., `navigateToLogin`, `fillCredentials`)
+- **Constants**: Use UPPER_SNAKE_CASE (e.g., `DEFAULT_TIMEOUT`, `API_BASE_URL`)
+- **Variables**: Use camelCase (e.g., `userName`, `dataPlaneUrl`)
+
+### 3. Function and Method Guidelines
+- Keep functions small and focused (max 20-30 lines)
+- Use descriptive function names that clearly indicate what they do
+- Always use `async/await` for asynchronous operations
+- Include proper error handling with try-catch blocks when needed
+
+### 4. Comments and Documentation
+- Write self-documenting code with clear variable and function names
+- Add comments only when the code's intent is not immediately clear
+- Use JSDoc comments for public methods and complex functions
+- Keep comments up-to-date with code changes
+
+### 5. Error Handling
+- Use meaningful error messages
+- Handle expected failures gracefully
+- Log errors with sufficient context for debugging
+- Avoid silent failures
+
+### 6. Performance
+- Minimize the use of `sleep()` or fixed waits
+- Use Playwright's built-in waiting mechanisms
+- Implement smart polling for dynamic content
+- Clean up resources properly (close browsers, cleanup test data)
+
+### 7. Security
+- Never commit sensitive data (passwords, API keys) to version control
+- Use environment variables for configuration
+- Follow the principle of least privilege for test accounts
+- Validate and sanitize test data inputs
+
+## Code Review Guidelines
+
+- Ensure all new code follows these standards
+- Check for proper error handling
+- Verify that tests are maintainable and readable
+- Confirm that locators are stable and robust
+- Review for potential security vulnerabilities
+# Coding Standards Rules
+
+## General Principles
+
+### 1. Code Organization
+- Follow the feature-centric directory structure
+- Keep related files (feature, steps, pages) co-located
+- Use descriptive and consistent naming conventions
+
+### 2. Naming Conventions
+- **Files**: Use kebab-case for file names (e.g., `login.page.ts`, `dashboard.steps.ts`)
+- **Classes**: Use PascalCase (e.g., `LoginPage`, `DashboardPage`)
+- **Functions/Methods**: Use camelCase (e.g., `navigateToLogin`, `fillCredentials`)
+- **Constants**: Use UPPER_SNAKE_CASE (e.g., `DEFAULT_TIMEOUT`, `API_BASE_URL`)
+- **Variables**: Use camelCase (e.g., `userName`, `dataPlaneUrl`)
+
+### 3. Function and Method Guidelines
+- Keep functions small and focused (max 20-30 lines)
+- Use descriptive function names that clearly indicate what they do
+- Always use `async/await` for asynchronous operations
+- Include proper error handling with try-catch blocks when needed
+
+### 4. Comments and Documentation
+- Write self-documenting code with clear variable and function names
+- Add comments only when the code's intent is not immediately clear
+- Use JSDoc comments for public methods and complex functions
+- Keep comments up-to-date with code changes
+
+### 5. Error Handling
+- Use meaningful error messages
+- Handle expected failures gracefully
+- Log errors with sufficient context for debugging
+- Avoid silent failures
+
+### 6. Performance
+- Minimize the use of `sleep()` or fixed waits
+- Use Playwright's built-in waiting mechanisms
+- Implement smart polling for dynamic content
+- Clean up resources properly (close browsers, cleanup test data)
+
+### 7. Security
+- Never commit sensitive data (passwords, API keys) to version control
+- Use environment variables for configuration
+- Follow the principle of least privilege for test accounts
+- Validate and sanitize test data inputs
+
+## Code Review Guidelines
+
+- Ensure all new code follows these standards
+- Check for proper error handling
+- Verify that tests are maintainable and readable
+- Confirm that locators are stable and robust
+- Review for potential security vulnerabilities

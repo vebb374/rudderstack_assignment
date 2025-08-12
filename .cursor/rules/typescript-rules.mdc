@@ -1,0 +1,576 @@
+---
+globs: *.ts
+alwaysApply: false
+---
+# TypeScript Rules and Guidelines
+
+## Type Safety Rules
+
+### 1. Strict TypeScript Configuration
+- Always use `strict: true` in tsconfig.json
+- Enable `noImplicitAny`, `strictNullChecks`, and `strictFunctionTypes`
+- Use `noImplicitReturns` and `noImplicitThis` for better code quality
+
+### 2. Type Definitions
+```typescript
+// ✅ GOOD - Explicit type definitions
+interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+interface EventData {
+  eventName: string;
+  userId: string;
+  properties: Record<string, unknown>;
+}
+
+// ❌ AVOID - Any types without justification
+function processData(data: any): any {
+  return data;
+}
+```
+
+### 3. Function Signatures
+```typescript
+// ✅ GOOD - Clear function signatures with return types
+async function login(credentials: LoginCredentials): Promise<void> {
+  await page.fill('[name="username"]', credentials.username);
+  await page.fill('[name="password"]', credentials.password);
+  await page.click('[type="submit"]');
+}
+
+// ✅ GOOD - Generic functions with constraints
+function extractData<T extends Record<string, unknown>>(
+  selector: string, 
+  transformer: (element: Element) => T
+): Promise<T> {
+  return page.evaluate((sel, transform) => {
+    const element = document.querySelector(sel);
+    return element ? transform(element) : null;
+  }, selector, transformer);
+}
+```
+
+## Interface and Type Design
+
+### 1. Interface Naming and Structure
+```typescript
+// ✅ GOOD - Clear, descriptive interfaces
+export interface ICustomWorld extends World {
+  browser?: Browser;
+  page?: Page;
+  loginPage?: LoginPage;
+  dashboardPage?: DashboardPage;
+  destinationPage?: DestinationPage;
+  dataPlaneUrl?: string;
+  writeKey?: string;
+  initialEventCount?: number;
+}
+
+export interface PageObjectBase {
+  readonly page: Page;
+  navigate?(url: string): Promise<void>;
+}
+```
+
+### 2. Union Types and Enums
+```typescript
+// ✅ GOOD - Use union types for limited options
+type Environment = 'staging' | 'production' | 'development';
+type BrowserName = 'chromium' | 'firefox' | 'webkit';
+
+// ✅ GOOD - Use enums for related constants
+enum TestPriority {
+  CRITICAL = 'critical',
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low'
+}
+
+enum EventType {
+  TRACK = 'track',
+  IDENTIFY = 'identify',
+  PAGE = 'page',
+  SCREEN = 'screen'
+}
+```
+
+## Class Design Rules
+
+### 1. Class Structure for Page Objects
+```typescript
+// ✅ GOOD - Well-structured page object class with proper typing
+export class DashboardPage implements PageObjectBase {
+  readonly page: Page;
+  // ✅ GOOD - Use readonly locators for step definitions access
+  readonly dataPlaneUrlElement: Locator;
+  readonly sourceWriteKeyElement: Locator;
+  readonly pageTitle: Locator;
+  readonly navigationMenu: Locator;
+  
+  constructor(page: Page) {
+    this.page = page;
+    // ✅ GOOD - Initialize locators in constructor using modern selectors
+    this.dataPlaneUrlElement = page.getByTestId('data-plane-url');
+    this.sourceWriteKeyElement = page.getByTestId('write-key');
+    this.pageTitle = page.getByRole('heading', { name: 'Dashboard' });
+    this.navigationMenu = page.getByRole('navigation');
+  }
+
+  async getDataPlaneUrl(): Promise<string> {
+    const url = await this.dataPlaneUrlElement.textContent();
+    if (!url) {
+      throw new PageObjectError('Data plane URL not found', 'DashboardPage', 'getDataPlaneUrl');
+    }
+    return url.trim();
+  }
+
+  async waitForPageLoad(): Promise<void> {
+    await this.page.waitForLoadState('domcontentloaded');
+    await expect(this.pageTitle).toBeVisible();
+  }
+}
+```
+
+### 2. Advanced Class Patterns
+```typescript
+// ✅ GOOD - Abstract base class for common page functionality
+export abstract class BasePage {
+  protected readonly page: Page;
+  abstract readonly pageTitle: Locator;
+  
+  constructor(page: Page) {
+    this.page = page;
+  }
+  
+  async navigate(url: string): Promise<void> {
+    await this.page.goto(url);
+    await this.waitForPageLoad();
+  }
+  
+  protected abstract waitForPageLoad(): Promise<void>;
+}
+
+// ✅ GOOD - Component composition pattern for complex pages
+export class ComplexPageWithTabs extends BasePage {
+  readonly pageTitle: Locator;
+  
+  // Components for each tab
+  readonly sourcesComponent: SourcesComponent;
+  readonly transformationComponent: TransformationComponent;
+  
+  constructor(page: Page) {
+    super(page);
+    this.pageTitle = page.getByRole('heading', { name: 'Destination Details' });
+    
+    // Initialize components
+    this.sourcesComponent = new SourcesComponent(page);
+    this.transformationComponent = new TransformationComponent(page);
+  }
+  
+  protected async waitForPageLoad(): Promise<void> {
+    await expect(this.pageTitle).toBeVisible();
+  }
+}
+
+// Example of a component class
+export class SourcesComponent {
+    readonly page: Page;
+    readonly addSourceButton: Locator;
+
+    constructor(page: Page) {
+        this.page = page;
+        this.addSourceButton = page.getByRole('button', { name: 'Add Source' });
+    }
+
+    async clickAddSource() {
+        await this.addSourceButton.click();
+    }
+}
+```
+
+### 2. Access Modifiers
+- Use `private` for internal implementation details
+- Use `protected` for methods that subclasses might need
+- Use `public` (or omit) for the API that other classes will use
+- Use `readonly` for properties that shouldn't change after initialization
+
+## Error Handling and Null Safety
+
+### 1. Null and Undefined Handling
+```typescript
+// ✅ GOOD - Proper null checking
+async function getEventCount(page: Page): Promise<number> {
+  const countElement = await page.locator('.event-count').textContent();
+  if (countElement === null) {
+    throw new Error('Event count element not found');
+  }
+  return parseInt(countElement, 10);
+}
+
+// ✅ GOOD - Optional chaining and nullish coalescing
+const eventCount = this.initialEventCount ?? 0;
+const url = this.dataPlaneUrl?.trim() ?? '';
+```
+
+### 2. Custom Error Types
+```typescript
+// ✅ GOOD - Custom error classes
+export class PageObjectError extends Error {
+  constructor(
+    message: string,
+    public readonly pageName: string,
+    public readonly action: string
+  ) {
+    super(`${pageName}: ${action} - ${message}`);
+    this.name = 'PageObjectError';
+  }
+}
+
+export class TestDataError extends Error {
+  constructor(message: string, public readonly dataType: string) {
+    super(`Test data error for ${dataType}: ${message}`);
+    this.name = 'TestDataError';
+  }
+}
+```
+
+## Generic Programming Rules
+
+### 1. Generic Constraints
+```typescript
+// ✅ GOOD - Constrained generics
+interface ApiResponse<T> {
+  data: T;
+  status: number;
+  message: string;
+}
+
+function createApiClient<T extends Record<string, unknown>>(
+  baseUrl: string
+): ApiClient<T> {
+  return new ApiClient<T>(baseUrl);
+}
+```
+
+### 2. Utility Types Usage
+```typescript
+// ✅ GOOD - Using built-in utility types
+type PartialLoginCredentials = Partial<LoginCredentials>;
+type RequiredEventData = Required<EventData>;
+type EventPropertyKeys = keyof EventData;
+
+// ✅ GOOD - Creating useful utility types
+type PageObjectConstructor<T> = new (page: Page) => T;
+type AsyncPageMethod<T> = (...args: unknown[]) => Promise<T>;
+```
+
+## Module and Import Rules
+
+### 1. Import Organization
+```typescript
+// ✅ GOOD - Organized imports
+// External libraries first
+import { Given, When, Then } from '@cucumber/cucumber';
+import { expect } from 'playwright/test';
+import { Page, Browser } from 'playwright';
+
+// Internal imports grouped logically
+import { ICustomWorld } from '../shared/world';
+import { LoginPage } from './login.page';
+import { ApiClient } from '../shared/utils';
+
+// Type-only imports when appropriate
+import type { EventData, LoginCredentials } from '../shared/types';
+```
+
+### 2. Export Strategies
+```typescript
+// ✅ GOOD - Named exports for utilities
+export { sendTrackEvent, createTestUser } from './api-utils';
+export { LoginPage, DashboardPage } from './page-objects';
+
+// ✅ GOOD - Default export for main classes
+export default class TestDataManager {
+  // Implementation
+}
+
+// ✅ GOOD - Re-exports for convenience
+export type { ICustomWorld } from './world';
+export { setupEnvironment } from './env';
+```
+
+## Async/Await Best Practices
+
+### 1. Promise Handling
+```typescript
+// ✅ GOOD - Proper async/await usage
+async function performComplexAction(page: Page): Promise<ActionResult> {
+  try {
+    await page.waitForSelector('.loading', { state: 'hidden' });
+    const result = await page.evaluate(() => window.getActionResult());
+    return result;
+  } catch (error) {
+    throw new PageObjectError(
+      `Failed to perform complex action: ${error.message}`,
+      'ActionPage',
+      'performComplexAction'
+    );
+  }
+}
+
+// ❌ AVOID - Mixed promise patterns
+function badAsyncPattern(page: Page) {
+  return page.click('.button').then(() => {
+    return page.waitForSelector('.result');
+  });
+}
+```
+
+### 2. Parallel Operations
+```typescript
+// ✅ GOOD - Parallel operations when independent
+async function gatherPageData(page: Page): Promise<PageData> {
+  const [title, url, timestamp] = await Promise.all([
+    page.title(),
+    page.url(),
+    page.evaluate(() => Date.now())
+  ]);
+  
+  return { title, url, timestamp };
+}
+```
+
+## Configuration and Constants
+
+### 1. Type-safe Configuration
+```typescript
+// ✅ GOOD - Strongly typed configuration
+interface TestConfig {
+  readonly baseUrl: string;
+  readonly timeout: number;
+  readonly retries: number;
+  readonly browser: BrowserName;
+  readonly headless: boolean;
+}
+
+const config: TestConfig = {
+  baseUrl: process.env.BASE_URL || 'https://app.rudderstack.com',
+  timeout: parseInt(process.env.TIMEOUT || '30000', 10),
+  retries: parseInt(process.env.RETRIES || '2', 10),
+  browser: (process.env.BROWSER as BrowserName) || 'chromium',
+  headless: process.env.HEADLESS !== 'false'
+};
+```
+
+### 2. Environment Variable Handling
+```typescript
+// ✅ GOOD - Type-safe environment variables
+function getRequiredEnvVar(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Required environment variable ${name} is not set`);
+  }
+  return value;
+}
+
+function getOptionalEnvVar(name: string, defaultValue: string): string {
+  return process.env[name] || defaultValue;
+}
+```
+
+## Cucumber-Specific TypeScript Patterns
+
+### 1. World Context Typing
+```typescript
+// ✅ GOOD - Strongly typed world context
+export interface ICustomWorld extends World {
+  // Page objects
+  loginPage?: LoginPage;
+  dashboardPage?: DashboardPage;
+  destinationPage?: DestinationPage;
+  
+  // Browser context
+  browser?: Browser;
+  page?: Page;
+  
+  // Test data with proper typing
+  testCredentials?: LoginCredentials;
+  currentUser?: UserProfile;
+  
+  // Dynamic test state
+  dataPlaneUrl?: string;
+  writeKey?: string;
+  initialEventCount?: number;
+  
+  // Environment specific data
+  environment?: Environment;
+  apiBaseUrl?: string;
+}
+
+// ✅ GOOD - Extend world context with utility methods
+export interface ICustomWorld extends World {
+  // Helper methods for common operations
+  getPage(): Page;
+  createTestData<T>(dataType: string): Promise<T>;
+  cleanup(): Promise<void>;
+}
+```
+
+### 2. Step Definition Type Safety
+```typescript
+// ✅ GOOD - Typed step definitions with proper error handling
+Given('the user is on the {string} page', 
+  async function (this: ICustomWorld, pageName: string) {
+    const page = this.getPage();
+    
+    switch (pageName.toLowerCase()) {
+      case 'login':
+        if (!this.loginPage) {
+          this.loginPage = new LoginPage(page);
+        }
+        await this.loginPage.navigate('/login');
+        break;
+      case 'dashboard':
+        if (!this.dashboardPage) {
+          this.dashboardPage = new DashboardPage(page);
+        }
+        await this.dashboardPage.navigate('/dashboard');
+        break;
+      default:
+        throw new Error(`Unknown page: ${pageName}`);
+    }
+  }
+);
+
+// ✅ GOOD - Type-safe data table handling
+When('the user fills the form with:', 
+  async function (this: ICustomWorld, dataTable: DataTable) {
+    const formData = dataTable.rowsHash() as LoginFormData;
+    
+    // Validate required fields at compile time
+    const requiredFields: (keyof LoginFormData)[] = ['email', 'password'];
+    for (const field of requiredFields) {
+      if (!formData[field]) {
+        throw new Error(`Missing required field: ${field}`);
+      }
+    }
+    
+    await this.loginPage!.fillForm(formData);
+  }
+);
+```
+
+### 3. Test Data Type Definitions
+```typescript
+// ✅ GOOD - Comprehensive test data interfaces
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface UserProfile extends LoginCredentials {
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  permissions: Permission[];
+}
+
+export interface TestEnvironment {
+  name: Environment;
+  baseUrl: string;
+  apiUrl: string;
+  credentials: Record<UserRole, LoginCredentials>;
+}
+
+// ✅ GOOD - Union types for test scenarios
+export type UserRole = 'admin' | 'user' | 'viewer';
+export type Environment = 'development' | 'staging' | 'production';
+export type TestResult = 'passed' | 'failed' | 'skipped';
+
+// ✅ GOOD - Generic test data factories
+export interface TestDataFactory<T> {
+  create(overrides?: Partial<T>): T;
+  createMany(count: number, overrides?: Partial<T>): T[];
+}
+
+export class UserFactory implements TestDataFactory<UserProfile> {
+  create(overrides: Partial<UserProfile> = {}): UserProfile {
+    return {
+      email: `test.user.${Date.now()}@example.com`,
+      password: 'TestPassword123!',
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'user',
+      permissions: [],
+      ...overrides
+    };
+  }
+  
+  createMany(count: number, overrides: Partial<UserProfile> = {}): UserProfile[] {
+    return Array.from({ length: count }, () => this.create(overrides));
+  }
+}
+```
+
+## Advanced Type Patterns for Test Automation
+
+### 1. Conditional Types for Page Objects
+```typescript
+// ✅ GOOD - Conditional types for dynamic page object creation
+type PageType = 'login' | 'dashboard' | 'settings';
+
+type PageObjectMap = {
+  login: LoginPage;
+  dashboard: DashboardPage;
+  settings: SettingsPage;
+};
+
+type GetPageObject<T extends PageType> = PageObjectMap[T];
+
+// ✅ GOOD - Type-safe page object factory
+export class PageFactory {
+  constructor(private page: Page) {}
+  
+  create<T extends PageType>(pageType: T): GetPageObject<T> {
+    switch (pageType) {
+      case 'login':
+        return new LoginPage(this.page) as GetPageObject<T>;
+      case 'dashboard':
+        return new DashboardPage(this.page) as GetPageObject<T>;
+      case 'settings':
+        return new SettingsPage(this.page) as GetPageObject<T>;
+      default:
+        throw new Error(`Unknown page type: ${pageType}`);
+    }
+  }
+}
+```
+
+### 2. Utility Types for Test Scenarios
+```typescript
+// ✅ GOOD - Utility types for test scenario validation
+type RequiredTestFields<T> = {
+  [K in keyof T]-?: T[K] extends undefined ? never : T[K];
+};
+
+type OptionalTestFields<T> = {
+  [K in keyof T]?: T[K];
+};
+
+// ✅ GOOD - Scenario configuration with proper typing
+export interface TestScenario<TData = unknown> {
+  name: string;
+  tags: string[];
+  data: TData;
+  expectedResult: TestResult;
+  setup?: () => Promise<void>;
+  cleanup?: () => Promise<void>;
+}
+
+export interface LoginTestScenario extends TestScenario<LoginCredentials> {
+  expectedError?: string;
+  shouldRedirect?: boolean;
+}
+```

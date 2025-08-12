@@ -1,0 +1,22 @@
+{
+  "name": "rudderstack_assignment",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test:staging",
+    "test:staging": "cross-env ENV=staging cucumber-js",
+    "test:prod": "cross-env ENV=production cucumber-js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.3.0",
+    "@playwright/test": "^1.54.2",
+    "@types/node": "^24.2.1",
+    "cross-env": "^7.0.3",
+    "dotenv": "^17.2.1",
+    "ts-node": "^10.9.2"
+  }
+}

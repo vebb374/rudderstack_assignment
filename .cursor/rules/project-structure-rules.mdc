@@ -1,0 +1,488 @@
+---
+alwaysApply: true
+---
+
+# Project Structure Rules
+
+## Directory Organization
+
+### 1. Feature-Centric Structure
+Follow the established feature-centric directory structure to maintain organization and scalability:
+
+```
+/features
+  /login
+    login.feature          # Gherkin scenarios for login functionality
+    login.steps.ts          # Step definitions for login scenarios
+    login.page.ts           # Page object for login page interactions
+    login.data.ts           # Test data specific to login (optional)
+  /dashboard
+    dashboard.feature       # Dashboard-related scenarios
+    dashboard.steps.ts      # Dashboard step definitions
+    dashboard.page.ts       # Dashboard page object
+    dashboard.data.ts       # Dashboard-specific test data (optional)
+  /events
+    events.feature          # Event flow scenarios
+    events.steps.ts         # Event-related step definitions
+    events.page.ts          # Event/destination page object
+    events.data.ts          # Event test data (optional)
+  /shared
+    common.steps.ts         # Reusable step definitions
+    hooks.ts                # Test lifecycle hooks
+    world.ts                # Custom Cucumber world
+    utils.ts                # Utility functions and API helpers
+    env.ts                  # Environment configuration
+    types.ts                # Shared TypeScript interfaces (optional)
+
+/@rules                     # Cursor rules and guidelines
+  coding-standards.md       # General coding standards
+  playwright-rules.md       # Playwright-specific rules
+  cucumber-bdd-rules.md     # BDD and Cucumber guidelines
+  typescript-rules.md       # TypeScript best practices
+  project-structure-rules.md # This file
+
+/config                     # Configuration files (optional)
+  environments/             # Environment-specific configs
+    staging.json
+    production.json
+
+/.github
+  /workflows
+    daily-run.yml           # CI/CD pipeline configuration
+
+# Root level files
+cucumber.js                 # Cucumber configuration
+tsconfig.json              # TypeScript configuration
+playwright.config.ts       # Playwright configuration
+package.json               # Project dependencies and scripts
+.gitignore                 # Git ignore patterns
+.env.staging.example       # Environment variable template
+.env.production.example    # Environment variable template
+```
+
+### 2. Enhanced File Naming Conventions
+
+#### Feature Files
+- Use descriptive, kebab-case names: `user-authentication.feature`
+- Name should reflect the business capability being tested
+- Keep names concise but clear
+- Group related features in subdirectories for complex applications
+
+#### TypeScript Files
+- **Page Objects**: `[feature-name].page.ts` (e.g., `login.page.ts`)
+- **Step Definitions**: `[feature-name].steps.ts` (e.g., `login.steps.ts`)
+- **Data Files**: `[feature-name].data.ts` (e.g., `login.data.ts`)
+- **Component Files**: `[component-name].component.ts` (e.g., `navigation.component.ts`)
+- **Utility Files**: Use descriptive names like `api-client.ts`, `test-helpers.ts`
+
+#### Class Names and Export Strategy
+- **Page Objects**: `[Feature]Page` (e.g., `LoginPage`, `DashboardPage`)
+- **Components**: `[Feature]Component` (e.g., `NavigationComponent`, `FormComponent`)
+- **Utility Classes**: Descriptive names (e.g., `ApiClient`, `TestDataManager`)
+- **Use named exports** for better tree-shaking and clarity
+
+### 3. Component Organization for Complex Pages
+For pages with multiple complex components (e.g., tabs, complex forms, modals), organize them into subdirectories within the feature folder. This improves modularity and maintainability.
+
+**Example**: A "Destination" page with multiple tabs (`Sources`, `Transformation`, `Events`, etc.).
+
+```
+/features
+  /destination
+    destination.feature
+    destination.steps.ts
+    destination.page.ts           # Main page object for the destination
+    /components                   # Folder for all components of the destination page
+      /sources                    # Sub-folder for the 'Sources' tab component
+        sources.component.ts
+      /transformation             # Sub-folder for the 'Transformation' tab component
+        transformation.component.ts
+      /events
+        events.component.ts
+      /settings
+        settings.component.ts
+```
+
+This structure helps in isolating component-specific logic.
+
+### 4. Base Page Strategy for Reusability
+To promote code reuse and reduce duplication, use base pages to share common locators, elements, and functionalities.
+
+- **Feature-level Base Pages**: Inside a feature directory (e.g., `/features/destination`), you can have a `destination-base.page.ts` that contains elements and methods common to all destination-related pages and components.
+
+- **Hierarchical (Recursive) Base Pages**: Base pages can inherit from other base pages. For example, a `destination-base.page.ts` might handle tab-switching logic, while its child component pages (like `sources.page.ts`) inherit from it and add their specific locators and methods. A global `base.page.ts` in `/features/shared` could provide even more fundamental functionalities.
+
+Example with a base page:
+```
+/features
+  /destination
+    destination.feature
+    destination.steps.ts
+    destination.page.ts
+    destination-base.page.ts      # Base page for destination components
+    /components
+      /sources
+        sources.component.ts      # Inherits from DestinationBasePage
+      /transformation
+        transformation.component.ts # Inherits from DestinationBasePage
+```
+
+## Feature Organization Rules
+
+### 1. Feature Boundaries
+- Each feature directory should represent a distinct business capability
+- Features should be independent and not tightly coupled
+- Shared functionality goes in the `/shared` directory
+
+### 2. File Co-location Principles
+- Keep all files related to a feature in the same directory
+- The feature file (`.feature`) is the source of truth for what's being tested
+- Step definitions (`.steps.ts`) implement the Gherkin steps
+- Page objects (`.page.ts`) handle UI interactions
+- Data files (`.data.ts`) contain feature-specific test data
+
+### 3. Cross-Feature Dependencies
+```typescript
+// ✅ GOOD - Import from shared utilities
+import { sendApiRequest } from '../shared/utils';
+import { ICustomWorld } from '../shared/world';
+
+// ✅ ACCEPTABLE - Import from another feature when there's a clear dependency
+import { LoginPage } from '../login/login.page';
+
+// ❌ AVOID - Circular dependencies between features
+// Don't import from peer feature directories unless absolutely necessary
+```
+
+## Shared Resources Organization
+
+### 1. Shared Directory Contents
+- **hooks.ts**: Browser lifecycle management, setup/teardown
+- **world.ts**: Custom Cucumber world for state sharing
+- **utils.ts**: API helpers, common utilities, test helpers
+- **env.ts**: Environment configuration and variable loading
+- **types.ts**: Shared TypeScript interfaces and types
+- **common.steps.ts**: Reusable step definitions used across features
+
+### 2. Utility Organization
+```typescript
+// ✅ GOOD - Well-organized utilities
+// In shared/utils.ts
+export class ApiClient {
+  // API-related methods
+}
+
+export class TestDataHelper {
+  // Test data generation and management
+}
+
+export function formatCurrency(amount: number): string {
+  // Utility functions
+}
+
+// Environment-specific utilities in shared/env.ts
+export function getEnvironmentConfig(): EnvironmentConfig {
+  // Environment configuration logic
+}
+```
+
+## Configuration File Rules
+
+### 1. Configuration Hierarchy
+1. **Project Root**: Main configuration files (`cucumber.js`, `tsconfig.json`, `playwright.config.ts`)
+2. **Environment Files**: `.env.*` files for different environments
+3. **Feature-Level**: Feature-specific configuration if needed
+
+### 2. Environment Management
+```
+# Environment file structure
+.env.staging              # Staging environment variables
+.env.production          # Production environment variables
+.env.staging.example     # Template for staging (committed)
+.env.production.example  # Template for production (committed)
+```
+
+## Import and Export Rules
+
+### 1. Import Path Organization
+```typescript
+// ✅ GOOD - Organized import order
+// 1. External library imports
+import { Given, When, Then } from '@cucumber/cucumber';
+import { expect } from 'playwright/test';
+
+// 2. Shared internal imports
+import { ICustomWorld } from '../shared/world';
+import { ApiClient } from '../shared/utils';
+
+// 3. Feature-specific imports
+import { LoginPage } from './login.page';
+
+// 4. Type-only imports (when using TypeScript)
+import type { LoginCredentials } from './login.data';
+```
+
+### 2. Export Strategy
+```typescript
+// ✅ GOOD - Clear exports from page objects
+export class LoginPage {
+  // Implementation
+}
+
+// ✅ GOOD - Re-exports for convenience
+// In shared/index.ts
+export { ICustomWorld } from './world';
+export { ApiClient } from './utils';
+export { setupEnvironment } from './env';
+```
+
+## Documentation Rules
+
+### 1. Required Documentation
+- **README.md**: Project overview, setup instructions, and running tests
+- **Feature Documentation**: Each feature should have clear acceptance criteria
+- **API Documentation**: Document any custom APIs or utilities
+
+### 2. Code Documentation
+```typescript
+// ✅ GOOD - Document complex methods
+/**
+ * Waits for the event count to reach the expected value
+ * @param expectedCount - The target event count
+ * @param timeout - Maximum wait time in milliseconds (default: 90000)
+ * @throws {Error} If the expected count is not reached within timeout
+ */
+async waitForEventCount(expectedCount: number, timeout = 90000): Promise<void> {
+  // Implementation
+}
+```
+
+## Testing Environment Rules
+
+### 1. Environment Separation
+- **Development**: Local development with flexible configuration
+- **Staging**: Pre-production testing environment
+- **Production**: Limited, safe production testing (if applicable)
+
+### 2. Test Data Management
+```typescript
+// ✅ GOOD - Environment-specific test data
+// In features/login/login.data.ts
+export const getTestCredentials = (env: string): LoginCredentials => {
+  switch (env) {
+    case 'staging':
+      return { username: 'test@staging.com', password: 'stagingpass' };
+    case 'production':
+      return { username: 'test@prod.com', password: 'prodpass' };
+    default:
+      throw new Error(`Unknown environment: ${env}`);
+  }
+};
+```
+
+## Maintenance and Scalability Rules
+
+### 1. Adding New Features
+1. Create new feature directory following the naming convention
+2. Add the feature file with clear scenarios
+3. Implement step definitions
+4. Create page object for UI interactions
+5. Add any feature-specific test data
+6. Update shared utilities if needed
+
+### 2. Refactoring Guidelines
+- Keep the feature-centric structure intact
+- Move shared code to `/shared` directory
+- Update import paths when moving files
+- Maintain backward compatibility when possible
+
+### 3. Cleanup Rules
+- Remove unused files and dependencies
+- Clean up test data after test execution
+- Archive or remove obsolete features
+- Keep the `/shared` directory organized and focused
+
+## Advanced Organization Patterns
+
+### 1. Test Data Management Structure
+```
+/test-data                    # Centralized test data
+  /fixtures                   # Static test data files
+    users.json
+    products.json
+    api-responses.json
+  /factories                  # Data generation factories
+    user-factory.ts
+    product-factory.ts
+  /environments              # Environment-specific data
+    staging-data.ts
+    production-data.ts
+  /uploads                   # Files for upload testing
+    sample-document.pdf
+    test-image.png
+```
+
+### 2. API and Utility Organization
+```
+/features/shared
+  /api                       # API client and services
+    api-client.ts            # Main API client
+    auth-service.ts          # Authentication service
+    user-service.ts          # User management service
+  /utils                     # Utility functions
+    date-helpers.ts          # Date manipulation utilities
+    string-helpers.ts        # String manipulation utilities
+    test-helpers.ts          # Test-specific helpers
+  /types                     # Shared type definitions
+    api-types.ts            # API response types
+    test-types.ts           # Test-specific types
+    user-types.ts           # User-related types
+```
+
+### 3. Configuration Management
+```
+/config
+  environments/
+    base.config.ts           # Base configuration
+    development.config.ts    # Development overrides
+    staging.config.ts        # Staging configuration
+    production.config.ts     # Production configuration
+  playwright.config.ts       # Playwright configuration
+  cucumber.config.ts         # Cucumber configuration
+```
+
+### 4. Environment-Specific File Organization
+```typescript
+// ✅ GOOD - Environment configuration structure
+// config/base.config.ts
+export interface TestConfig {
+  baseUrl: string;
+  apiUrl: string;
+  timeout: number;
+  retries: number;
+  screenshots: boolean;
+  videos: boolean;
+}
+
+export const baseConfig: TestConfig = {
+  baseUrl: 'http://localhost:3000',
+  apiUrl: 'http://localhost:3000/api',
+  timeout: 30000,
+  retries: 2,
+  screenshots: true,
+  videos: false
+};
+
+// config/staging.config.ts
+import { baseConfig } from './base.config';
+
+export const stagingConfig: TestConfig = {
+  ...baseConfig,
+  baseUrl: 'https://staging.example.com',
+  apiUrl: 'https://api-staging.example.com',
+  videos: true
+};
+```
+
+## Import and Export Best Practices
+
+### 1. Consistent Import Patterns
+```typescript
+// ✅ GOOD - Organized import structure
+// External libraries first
+import { Given, When, Then } from '@cucumber/cucumber';
+import { expect } from '@playwright/test';
+import { Page } from 'playwright';
+
+// Shared internal imports
+import { ICustomWorld } from '../shared/world';
+import { ApiClient } from '../shared/api/api-client';
+
+// Feature-specific imports
+import { LoginPage } from './login.page';
+import { loginTestData } from './login.data';
+
+// Type-only imports
+import type { LoginCredentials, UserProfile } from '../shared/types/user-types';
+```
+
+### 2. Index Files for Clean Imports
+```typescript
+// ✅ GOOD - Use index files to simplify imports
+// features/shared/index.ts
+export { ICustomWorld } from './world';
+export { ApiClient } from './api/api-client';
+export { TestDataManager } from './utils/test-data-manager';
+export * from './types';
+
+// In test files
+import { ICustomWorld, ApiClient, TestDataManager } from '../shared';
+```
+
+### 3. Path Aliases Configuration
+```json
+// tsconfig.json - Configure path aliases for cleaner imports
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@features/*": ["features/*"],
+      "@shared/*": ["features/shared/*"],
+      "@config/*": ["config/*"],
+      "@test-data/*": ["test-data/*"]
+    }
+  }
+}
+```
+
+## File Size and Complexity Guidelines
+
+### 1. File Size Recommendations
+- **Feature files**: Keep scenarios focused, 10-20 scenarios max
+- **Step definition files**: Group related steps, max 300-500 lines
+- **Page object files**: Single responsibility, max 200-300 lines
+- **Utility files**: Focused purpose, max 150-200 lines
+
+### 2. When to Split Files
+```typescript
+// ✅ GOOD - Split large page objects into components
+// Instead of one large DashboardPage
+export class DashboardPage {
+  readonly navigation: NavigationComponent;
+  readonly dataPanel: DataPanelComponent;
+  readonly settingsModal: SettingsModalComponent;
+  
+  constructor(page: Page) {
+    this.navigation = new NavigationComponent(page);
+    this.dataPanel = new DataPanelComponent(page);
+    this.settingsModal = new SettingsModalComponent(page);
+  }
+}
+```
+
+### 3. Code Organization Within Files
+```typescript
+// ✅ GOOD - Consistent organization within page objects
+export class LoginPage {
+  // 1. Properties and locators
+  readonly page: Page;
+  readonly emailInput: Locator;
+  readonly passwordInput: Locator;
+  
+  // 2. Constructor
+  constructor(page: Page) {
+    this.page = page;
+    this.emailInput = page.getByLabel('Email');
+    this.passwordInput = page.getByLabel('Password');
+  }
+  
+  // 3. Public methods (alphabetically ordered)
+  async fillCredentials(email: string, password: string): Promise<void> { }
+  async login(credentials: LoginCredentials): Promise<void> { }
+  async navigate(url: string): Promise<void> { }
+  
+  // 4. Private helper methods
+  private async validateForm(): Promise<void> { }
+  private async waitForPageLoad(): Promise<void> { }
+}
+```
