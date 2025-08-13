@@ -2,21 +2,37 @@
   "name": "rudderstack_assignment",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "npm run test:staging",
     "test:staging": "cross-env ENV=staging cucumber-js",
-    "test:prod": "cross-env ENV=production cucumber-js"
+    "test:prod": "cross-env ENV=production cucumber-js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "code-quality": "npm run lint && npm run format:check"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@cucumber/cucumber": "^11.3.0",
+    "@cucumber/cucumber": "^12.1.0",
     "@playwright/test": "^1.54.2",
     "@types/node": "^24.2.1",
-    "cross-env": "^7.0.3",
+    "cross-env": "^10.0.0",
     "dotenv": "^17.2.1",
     "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-playwright": "^2.2.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2"
   }
 }

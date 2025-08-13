@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+*.json
+*.md
+*.feature
+package-lock.json
+cucumber.js
+tsconfig.json
+playwright.config.ts

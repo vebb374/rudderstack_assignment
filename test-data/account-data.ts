@@ -18,8 +18,8 @@ export type AccountKey = keyof typeof accounts;
  *
  * @example
  * const { email, password, dataPlaneUrl } = getAccountData('discrip_production');
- * 
- * @example  
+ *
+ * @example
  * const account = getAccountData('discrip_production');
  * await loginPage.login(account.email, account.password);
  */
@@ -30,11 +30,13 @@ export function getAccountData<K extends AccountKey>(key: K): RudderStackAccount
 /**
  * Get account credentials only (email and password)
  */
-export function getAccountCredentials<K extends AccountKey>(key: K): { email: string; password: string } {
+export function getAccountCredentials<K extends AccountKey>(
+    key: K
+): { email: string; password: string } {
     const account = accounts[key];
     return {
         email: account.email,
-        password: account.password
+        password: account.password,
     };
 }
 
