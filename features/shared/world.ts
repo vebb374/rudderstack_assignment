@@ -18,6 +18,9 @@ export interface ICustomWorld extends World {
     readonly destinationDetailsPage: DestinationDetailsPage;
     readonly eventsPage: EventsPage;
 
+    // Test state for event tracking
+    initialEventCount?: number;
+
     cleanup(): void;
 }
 

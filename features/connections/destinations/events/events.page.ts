@@ -45,4 +45,77 @@ export class EventsPage {
         await this.commonUI.waitForSkeletonToDisappear();
         await this.waitForPageLoad();
     }
+
+    /**
+     * Navigate to the Events tab (assumes we're on destination details page)
+     */
+    async navigateToEventsTab(): Promise<void> {
+        const eventsTab = this.page.getByRole("tab", { name: "Events" });
+        await eventsTab.click();
+        await this.waitForPageLoad();
+    }
+
+    /**
+     * Get the delivered events count specifically
+     */
+    async getDeliveredEventsCount(): Promise<number> {
+        return await this.getMetricValue("Delivered");
+    }
+
+    /**
+     * Wait for the delivered event count to reach a specific value
+     * Refreshes metrics every 10 seconds to get latest data
+     */
+    async waitForEventCount(expectedCount: number, timeout = 90000): Promise<void> {
+        const startTime = Date.now();
+        const refreshInterval = 10000; // 10 seconds
+
+        while (Date.now() - startTime < timeout) {
+            console.log(`🔄 Refreshing metrics to check for event count >= ${expectedCount}`);
+
+            // Refresh the metrics to get latest data
+            await this.refreshMetrics();
+
+            // Check current count
+            const currentCount = await this.getDeliveredEventsCount();
+            console.log(`📊 Current delivered count: ${currentCount}, Expected: ${expectedCount}`);
+
+            if (currentCount >= expectedCount) {
+                console.log(
+                    `✅ Event count reached! Current: ${currentCount}, Expected: ${expectedCount}`
+                );
+                return;
+            }
+
+            // Wait 10 seconds before next refresh
+            console.log(`⏳ Waiting 10 seconds before next refresh...`);
+            await this.page.waitForTimeout(refreshInterval);
+        }
+
+        // Final check and throw error if timeout reached
+        const finalCount = await this.getDeliveredEventsCount();
+        throw new Error(
+            `Timeout waiting for event count. Expected: ${expectedCount}, Final count: ${finalCount}, Timeout: ${timeout}ms`
+        );
+    }
+
+    /**
+     * Check if the events trend chart is visible
+     */
+    async isEventsTrendChartVisible(): Promise<boolean> {
+        try {
+            await this.eventsTrendChart.waitFor({ state: "visible", timeout: 5000 });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if there's any event data displayed
+     */
+    async hasEventData(): Promise<boolean> {
+        const deliveredCount = await this.getDeliveredEventsCount();
+        return deliveredCount > 0;
+    }
 }

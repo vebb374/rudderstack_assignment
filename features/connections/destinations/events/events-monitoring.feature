@@ -13,8 +13,9 @@ Feature: Events Monitoring
     And the user should see the failure rate percentage
 
 
-  # Scenario: Verify end-to-end event delivery
-  #   Given the user has captured the initial event count
-  #   When the user sends a "test_event" event to the source via API
-  #   Then the "Delivered" event count should increase by 1
-  #   And the events trend chart should show the new event
+  Scenario: Verify end-to-end event delivery
+    Given the user clicks on the "Events" tab in destination details page
+    And the user has captured the initial event count
+    When the user sends a "test_event" event to the source via API
+    Then the "Delivered" event count should increase by 1
+

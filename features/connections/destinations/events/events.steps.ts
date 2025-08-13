@@ -24,7 +24,7 @@ When(
     "the user sends a {string} event to the source via API",
     async function (this: ICustomWorld, eventName: string) {
         // Simple, direct approach - no need to capture from UI
-        await sendTrackEventForAccount("discrip_production", eventName);
+        await sendTrackEventForAccount("dummy company", eventName);
     }
 );
 
@@ -57,13 +57,3 @@ Then(
         }
     }
 );
-
-Then("the events trend chart should show the new event", async function (this: ICustomWorld) {
-    // Verify that the events trend chart is visible and potentially shows data
-    const isChartVisible = await this.eventsPage.isEventsTrendChartVisible();
-    expect(isChartVisible).toBe(true);
-
-    // Check if we have event data now
-    const _hasData = await this.eventsPage.hasEventData();
-    // Note: This might still be false immediately after sending due to latency
-});
