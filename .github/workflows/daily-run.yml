@@ -69,8 +69,6 @@ jobs:
             - name: Run E2E tests (${{ matrix.environment }})
               run: npm run test:${{ matrix.environment }}
               env:
-                  USERNAME: ${{ secrets.USERNAME }}
-                  PASSWORD: ${{ secrets.PASSWORD }}
                   CI: true
               continue-on-error: true
 

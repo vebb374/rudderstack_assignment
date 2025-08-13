@@ -47,6 +47,7 @@ Then("the user should see the failure rate percentage", async function (this: IC
 
 Then(
     "the {string} event count should increase by {int}",
+    { timeout: 120000 }, // 2 minutes timeout for event processing
     async function (this: ICustomWorld, countType: string, increase: number) {
         if (countType === "Delivered") {
             await this.eventsPage.waitForEventCount(this.initialEventCount! + increase);
