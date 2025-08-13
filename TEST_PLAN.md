@@ -45,8 +45,37 @@ The following items are considered out of scope for this assignment:
 
 ### 3.3. Test Data Management
 
-- **Credentials & Configuration**: Sensitive data like usernames and passwords will be managed using a `.env` file for local development. For CI/CD, these will be handled via GitHub Actions secrets.
+#### 3.3.1. Test Credentials Management
+
+**Local Development:**
+- Sensitive data like usernames and passwords are managed using environment-specific `.env` files
+- Example files provided: `.env.staging.example` and `.env.production.example`
+- Developers copy example files and populate with actual credentials locally
+- `.env` files are excluded from version control via `.gitignore`
+
+**Environment-Specific Credentials:**
+- **Staging Environment**: Uses dedicated test accounts for staging.rudderstack.com
+- **Production Environment**: Uses separate test accounts for app.rudderstack.com
+- Each environment maintains isolated test data and configurations
+
+**CI/CD Security:**
+- Credentials stored securely using GitHub Actions repository secrets
+- Environment variables: `USERNAME` and `PASSWORD`
+- Secrets are injected at runtime and never exposed in logs
+- Matrix strategy allows testing against multiple environments with same credentials structure
+
+**Credential Requirements:**
+- Valid RudderStack Cloud account credentials for each environment
+- Accounts must have access to pre-configured HTTP Sources and Webhook Destinations
+- Test accounts should have appropriate permissions for:
+  - Reading connection configurations
+  - Accessing destination event monitoring
+  - API access for sending track events
+
+#### 3.3.2. Test Preconditions
+
 - **Test Preconditions**: The tests will assume the existence of a specific HTTP Source and a Webhook Destination within the RudderStack account, which are prerequisites for the test execution.
+- **Data Isolation**: Each environment (staging/production) maintains separate test data to prevent cross-environment interference
 
 ### 3.4. Verification & Assertions
 
@@ -55,14 +84,40 @@ The following items are considered out of scope for this assignment:
 
 ## 4. Test Environment & Prerequisites
 
+### 4.1. Environment Configuration
+
+**Staging Environment:**
+- **URL**: `https://staging.rudderstack.com` (or staging equivalent)
+- **Command**: `npm run test:staging`
+- **Browser**: Chromium (headless in CI, headed for local debugging)
+
+**Production Environment:**
 - **URL**: `https://app.rudderstack.com`
-- **Browser**: Chromium
-- **Prerequisites**:
-    1. A valid RudderStack Cloud account with login credentials.
-    2. An existing HTTP Source.
-    3. An existing Webhook Destination.
-    4. A connection established between the specified Source and Destination.
-    5. A local `.env` file (copied from `.env.example`) populated with the `USERNAME` and `PASSWORD`.
+- **Command**: `npm run test:prod`
+- **Browser**: Chromium (headless in CI, headed for local debugging)
+
+### 4.2. Prerequisites
+
+**Account Requirements:**
+1. Valid RudderStack Cloud account credentials for each target environment
+2. Test accounts with appropriate permissions for:
+   - Authentication and workspace access
+   - Reading connection configurations
+   - Accessing destination monitoring features
+   - API access for event tracking
+
+**Pre-configured Resources:**
+1. An existing HTTP Source in each environment
+2. An existing Webhook Destination in each environment  
+3. A connection established between the specified Source and Destination
+4. Stable source and destination identifiers for consistent test execution
+
+**Local Development Setup:**
+1. Copy `.env.staging.example` to `.env.staging` and populate with staging credentials
+2. Copy `.env.production.example` to `.env.production` and populate with production credentials
+3. Ensure Node.js 18+ and npm are installed
+4. Run `npm install` to install dependencies
+5. Run `npx playwright install --with-deps chromium` to install browser
 
 ## 5. High-Level Test Case
 
@@ -79,17 +134,82 @@ The primary scenario will be defined in a Gherkin `.feature` file.
     And the user navigates to the Webhook Destination page
     Then the user should see the "Delivered" event count has increased by 1
 
-## 6. CI/CD Integration
+## 6. Credential Setup and Security Guidelines
 
-- **Platform**: GitHub Actions.
-- **Trigger**: The test suite will be configured to run on a daily schedule (`cron`) and can also be triggered manually (`workflow_dispatch`).
-- **Secrets Management**: Credentials will be stored and accessed securely using GitHub repository secrets.
+### 6.1. Local Development Credential Setup
 
-## 7. Risks and Mitigations
+**Step 1: Environment File Creation**
+```bash
+# Copy example files
+cp .env.staging.example .env.staging
+cp .env.production.example .env.production
+```
+
+**Step 2: Populate Credentials**
+```bash
+# .env.staging
+USERNAME=your-staging-username@example.com
+PASSWORD=your-staging-password
+
+# .env.production  
+USERNAME=your-production-username@example.com
+PASSWORD=your-production-password
+```
+
+**Step 3: Verify Setup**
+```bash
+# Test staging environment
+npm run test:staging
+
+# Test production environment  
+npm run test:prod
+```
+
+### 6.2. CI/CD Credential Setup
+
+**GitHub Repository Secrets Configuration:**
+1. Navigate to repository Settings → Secrets and variables → Actions
+2. Add the following repository secrets:
+   - `USERNAME`: Test account username/email for RudderStack
+   - `PASSWORD`: Test account password for RudderStack
+
+**Security Best Practices:**
+- Use dedicated test accounts, never personal accounts
+- Rotate credentials regularly (quarterly recommended)
+- Ensure test accounts have minimal required permissions
+- Monitor test account activity for security anomalies
+- Use different credentials for staging vs production environments when possible
+
+### 6.3. Credential Security Guidelines
+
+**What NOT to commit:**
+- Actual `.env` files with real credentials
+- Hardcoded usernames or passwords in code
+- API keys or tokens in plain text
+- Any sensitive configuration data
+
+**What TO commit:**
+- `.env.example` files with placeholder values
+- Documentation about required environment variables
+- Configuration templates and setup instructions
+
+## 7. CI/CD Integration
+
+- **Platform**: GitHub Actions with enhanced workflow configuration
+- **Triggers**: 
+  - Daily schedule (`cron: "0 0 * * *"`) for automated regression testing
+  - Manual workflow dispatch with environment and browser selection options
+- **Multi-Environment Testing**: Matrix strategy to test both staging and production environments
+- **Secrets Management**: Credentials stored securely using GitHub repository secrets and injected at runtime
+- **Artifact Collection**: Test reports, screenshots, and Cucumber HTML reports archived for debugging
+
+## 8. Risks and Mitigations
 
 | Risk | Mitigation |
 | :--- | :--- |
 | **UI Changes Breaking Locators** | Use robust, non-brittle selectors (e.g., `data-testid`, ARIA roles). The POM design centralizes locators, making them easier to update if changes occur. |
 | **Test Flakiness from Latency** | Implement a robust polling mechanism with appropriate timeouts when waiting for asynchronous operations, such as the event count updating. |
 | **Test Environment Unavailability** | The CI/CD pipeline will report failures clearly. For a real-world project, alerts would be configured for any CI job failures. |
-| **Changes to HTTP API Contract**| The API call logic will be encapsulated in a dedicated helper function. This isolates the logic, making it easier to update if the API specification changes. |
+| **Changes to HTTP API Contract** | The API call logic will be encapsulated in a dedicated helper function. This isolates the logic, making it easier to update if the API specification changes. |
+| **Credential Security Breaches** | Use dedicated test accounts with minimal permissions, regular credential rotation, and secure storage in GitHub secrets. Environment-specific accounts isolate potential security impacts. |
+| **Environment Configuration Drift** | Maintain separate configuration files for each environment and validate environment-specific prerequisites before test execution. Use matrix testing to catch environment-specific issues early. |

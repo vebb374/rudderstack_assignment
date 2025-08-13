@@ -2,29 +2,107 @@ name: RudderStack E2E Tests
 
 on:
     schedule:
-        - cron: "0 0 * * *" # Runs daily at midnight
+        - cron: "0 0 * * *" # Runs daily at midnight UTC
     workflow_dispatch: # Allows manual triggering
+        inputs:
+            environment:
+                description: "Environment to run tests against"
+                required: true
+                default: "production"
+                type: choice
+                options:
+                    - staging
+                    - production
+            browser:
+                description: "Browser to run tests on"
+                required: false
+                default: "chromium"
+                type: choice
+                options:
+                    - chromium
+                    - firefox
+                    - webkit
 
 jobs:
-    test:
+    code-quality:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
             - name: Set up Node.js
-              uses: actions/setup-node@v3
+              uses: actions/setup-node@v4
               with:
-                  node-version: "18"
+                  node-version: "20"
+                  cache: "npm"
 
             - name: Install dependencies
-              run: npm install
+              run: npm ci
+
+            - name: Run code quality checks
+              run: npm run code-quality
+
+    test:
+        needs: code-quality
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                environment: [staging, production]
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
 
             - name: Install Playwright browsers
-              run: npx playwright install --with-deps
+              run: npx playwright install --with-deps chromium
 
-            - name: Run tests
-              run: npm test
+            - name: Run E2E tests (${{ matrix.environment }})
+              run: npm run test:${{ matrix.environment }}
               env:
                   USERNAME: ${{ secrets.USERNAME }}
                   PASSWORD: ${{ secrets.PASSWORD }}
+                  CI: true
+              continue-on-error: true
+
+            - name: Upload test results
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: test-results-${{ matrix.environment }}
+                  path: |
+                      test-results/
+                  retention-days: 30
+
+            - name: Upload Cucumber HTML report
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: cucumber-report-${{ matrix.environment }}
+                  path: test-results/cucumber-report.html
+                  retention-days: 30
+
+    notify:
+        needs: [code-quality, test]
+        runs-on: ubuntu-latest
+        if: always()
+        steps:
+            - name: Check test results
+              run: |
+                  if [[ "${{ needs.test.result }}" == "failure" ]]; then
+                      echo "❌ Tests failed in one or more environments"
+                      exit 1
+                  elif [[ "${{ needs.test.result }}" == "success" ]]; then
+                      echo "✅ All tests passed successfully"
+                  else
+                      echo "⚠️ Tests completed with issues"
+                  fi
