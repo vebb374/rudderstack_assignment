@@ -4,30 +4,47 @@ export class ConnectionsPage {
     readonly page: Page;
     readonly pageTitle: Locator;
     readonly dataPlaneUrlElement: Locator;
+
+    // Sources
+    readonly sourcesListSection: Locator;
+    readonly sourceCardContainer: (sourceName: string) => Locator;
     readonly sourceWriteKeyElement: Locator;
-    readonly httpSourceLink: Locator;
-    readonly webhookDestinationLink: Locator;
-    readonly sourcesSection: Locator;
-    readonly destinationsSection: Locator;
+
+    // Destinations
+    readonly destinationsListSection: Locator;
+    readonly destinationCardContainer: (destinationName: string) => Locator;
+    readonly destinationWriteKeyElement: Locator;
+
+    // Ask AI Pop Up
+    readonly askAIPopUp: Locator;
+    readonly closeAskAIPopUpButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
+        this.askAIPopUp = page
+            .getByRole("alertdialog")
+            .filter({ hasText: "Have a question? Ask AI (Beta)" });
+        this.closeAskAIPopUpButton = this.askAIPopUp.getByRole("button", { name: "Close" });
         this.pageTitle = page.getByRole("heading", { name: "Connections" });
-        this.dataPlaneUrlElement = page.locator("text=https://").first();
-        this.sourceWriteKeyElement = page
-            .locator("text=Write key")
-            .locator("..")
-            .locator("text=/^31[A-Za-z0-9]+/");
-        this.httpSourceLink = page.getByRole("link").filter({ hasText: "assignment Source 1" });
-        this.webhookDestinationLink = page
-            .getByRole("link")
-            .filter({ hasText: "request catcher 1" });
-        this.sourcesSection = page.locator("text=Sources (1)").locator("..");
-        this.destinationsSection = page.locator("text=Destinations (1)").locator("..");
+        this.dataPlaneUrlElement = page
+            .locator("#top-layout")
+            .locator("span")
+            .filter({ hasText: "https://" });
+        this.sourcesListSection = page.locator("div[id=sources-list]");
+        this.destinationsListSection = page.locator("div[id=destinations-list]");
+        this.sourceCardContainer = (sourceName: string) =>
+            this.sourcesListSection.locator(`div[id^="source-"]`).filter({ hasText: sourceName });
+        this.destinationCardContainer = (destinationName: string) =>
+            this.destinationsListSection
+                .locator(`div[id^="destination-"]`)
+                .filter({ hasText: destinationName });
+        this.sourceWriteKeyElement = this.sourcesListSection
+            .locator(`div[id^="source-"]`)
+            .getByText("Write key");
     }
 
     async waitForPageLoad(): Promise<void> {
-        await this.page.waitForLoadState("domcontentloaded");
+        await this.page.waitForLoadState();
         await this.pageTitle.waitFor({ state: "visible" });
     }
 
@@ -47,19 +64,19 @@ export class ConnectionsPage {
         return key.trim();
     }
 
-    async clickHttpSource(): Promise<void> {
-        await this.httpSourceLink.click();
+    async clickSource(sourceName: string): Promise<void> {
+        await this.sourceCardContainer(sourceName).click();
     }
 
-    async clickWebhookDestination(): Promise<void> {
-        await this.webhookDestinationLink.click();
+    async clickDestination(destinationName: string): Promise<void> {
+        await this.destinationCardContainer(destinationName).click();
     }
 
-    async isSourceVisible(): Promise<boolean> {
-        return await this.httpSourceLink.isVisible();
+    async isSourceVisible(sourceName: string): Promise<boolean> {
+        return await this.sourceCardContainer(sourceName).isVisible();
     }
 
-    async isDestinationVisible(): Promise<boolean> {
-        return await this.webhookDestinationLink.isVisible();
+    async isDestinationVisible(destinationName: string): Promise<boolean> {
+        return await this.destinationCardContainer(destinationName).isVisible();
     }
 }

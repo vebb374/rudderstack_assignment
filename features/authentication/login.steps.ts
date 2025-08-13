@@ -1,8 +1,8 @@
 import { Given, When, Then } from "@cucumber/cucumber";
 import { expect } from "playwright/test";
-import { ICustomWorld } from "../shared/world";
-import { getAccountCredentials } from "../../test-data/account-data";
-import { getEnvironmentConfig } from "../shared/env";
+import { ICustomWorld } from "@features/shared/world";
+import { getAccountCredentials } from "@test-data/account-data";
+import { getEnvironmentConfig } from "@features/shared/env";
 
 Given("the user is on the RudderStack login page", async function (this: ICustomWorld) {
     // Clean syntax - factory handles initialization automatically
@@ -13,6 +13,8 @@ Given("the user is on the RudderStack login page", async function (this: ICustom
 When("the user logs in with valid credentials", async function (this: ICustomWorld) {
     // Same instance reused automatically via factory caching
     const { email, password } = getAccountCredentials("discrip_production");
+    console.log("email", email);
+    console.log("password", password);
     await this.loginPage.login(email, password);
     await this.loginPage.handle2FA();
 });

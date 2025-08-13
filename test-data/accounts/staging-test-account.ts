@@ -6,7 +6,6 @@ const account: RudderStackAccount = {
     description: "Staging environment test account - update with real credentials",
     organization: "staging-org",
     workspace: "staging-workspace",
-    environment: "staging",
     dataPlaneUrl: "https://staging.dataplane.rudderstack.com",
     sources: {
         httpSource: {

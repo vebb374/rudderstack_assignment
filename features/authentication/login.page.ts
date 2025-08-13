@@ -10,9 +10,9 @@ export class LoginPage {
 
     constructor(page: Page) {
         this.page = page;
-        this.emailInput = page.getByLabel("Email");
-        this.passwordInput = page.getByLabel("Password");
-        this.loginButton = page.getByRole("button", { name: "Log in" });
+        this.emailInput = page.getByTestId("email");
+        this.passwordInput = page.getByTestId("password");
+        this.loginButton = page.getByRole("button", { name: "Log in", exact: true });
         this.illDoThisLaterButton = page.getByRole("link", { name: "I'll do this later" });
         this.goToDashboardButton = page.getByRole("button", { name: "Go to dashboard" });
     }
