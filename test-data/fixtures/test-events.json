@@ -1,0 +1,27 @@
+{
+    "sampleTrackEvent": {
+        "userId": "test-user-123",
+        "event": "test_event",
+        "properties": {
+            "test": "test-property",
+            "source": "automated-test",
+            "environment": "test"
+        }
+    },
+    "identifyEvent": {
+        "userId": "test-user-123",
+        "traits": {
+            "email": "test@example.com",
+            "name": "Test User",
+            "plan": "enterprise"
+        }
+    },
+    "pageEvent": {
+        "userId": "test-user-123",
+        "name": "Test Page",
+        "properties": {
+            "url": "https://example.com/test",
+            "title": "Test Page Title"
+        }
+    }
+}

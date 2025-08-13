@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "devDependencies": {
+  "dependencies": {
     "@cucumber/cucumber": "^11.3.0",
     "@playwright/test": "^1.54.2",
     "@types/node": "^24.2.1",

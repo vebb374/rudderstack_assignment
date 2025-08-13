@@ -7,10 +7,23 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
-        "outDir": "./dist"
+        "outDir": "./dist",
+        "baseUrl": ".",
+        "paths": {
+            "@test-data/*": [
+                "test-data/*"
+            ],
+            "@shared/*": [
+                "features/shared/*"
+            ],
+            "@features/*": [
+                "features/*"
+            ]
+        }
     },
     "include": [
-        "features/**/*.ts"
+        "features/**/*.ts",
+        "test-data"
     ],
     "exclude": [
         "node_modules"

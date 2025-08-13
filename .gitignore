@@ -15,6 +15,10 @@ yarn-error.log*
 .env*
 !.env.*.example
 
+# Test data - exclude any files containing real sensitive data
+test-data/credentials/*-sensitive.*
+test-data/credentials/real-*
+
 # Playwright reports
 /playwright-report/
 /test-results/

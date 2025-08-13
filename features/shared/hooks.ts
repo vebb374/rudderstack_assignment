@@ -8,11 +8,24 @@ BeforeAll(() => {
 });
 
 Before(async function (this: ICustomWorld) {
-  this.browser = await chromium.launch({ headless: true });
-  const context = await this.browser.newContext();
+  this.browser = await chromium.launch({ 
+    headless: process.env.HEADLESS !== 'false',
+    slowMo: process.env.SLOW_MO ? parseInt(process.env.SLOW_MO) : 0
+  });
+  
+  const context = await this.browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    recordVideo: process.env.RECORD_VIDEO === 'true' ? { dir: 'test-results/videos' } : undefined
+  });
+  
   this.page = await context.newPage();
 });
 
 After(async function (this: ICustomWorld) {
-  await this.browser?.close();
+  if (this.page) {
+    await this.page.close();
+  }
+  if (this.browser) {
+    await this.browser.close();
+  }
 });
