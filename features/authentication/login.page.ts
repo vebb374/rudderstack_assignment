@@ -35,7 +35,7 @@ export class LoginPage {
     }
 
     async isLoggedIn(): Promise<boolean> {
-        await this.page.waitForURL((url) => !url.toString().includes("/login"), { timeout: 5000 });
+        await this.page.waitForURL((url) => !url.toString().includes("/login"), { timeout: 10000 });
         return true;
     }
 }

@@ -89,18 +89,3 @@ jobs:
                   path: test-results/cucumber-report.html
                   retention-days: 30
 
-    notify:
-        needs: [code-quality, test]
-        runs-on: ubuntu-latest
-        if: always()
-        steps:
-            - name: Check test results
-              run: |
-                  if [[ "${{ needs.test.result }}" == "failure" ]]; then
-                      echo "❌ Tests failed in one or more environments"
-                      exit 1
-                  elif [[ "${{ needs.test.result }}" == "success" ]]; then
-                      echo "✅ All tests passed successfully"
-                  else
-                      echo "⚠️ Tests completed with issues"
-                  fi

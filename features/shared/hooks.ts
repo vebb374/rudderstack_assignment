@@ -6,7 +6,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * Clears all files and subdirectories in the test-results folder
+ * Clears only ZIP files (Playwright traces) from the test-results folder
+ * Keeps HTML and JSON reports intact for persistence across test runs
  * Only runs on the main worker to avoid race conditions in parallel execution
  */
 function clearTestResults(): void {
@@ -29,19 +30,21 @@ function clearTestResults(): void {
         // Read all files in the directory
         const files = fs.readdirSync(testResultsDir);
 
-        // Remove each file (no subdirectories expected)
-        files.forEach((file) => {
-            const filePath = path.join(testResultsDir, file);
-            try {
-                fs.unlinkSync(filePath);
-            } catch (fileError) {
-                // File might have been deleted by another process, continue
-                const error = fileError as { code?: string };
-                if (error.code !== "ENOENT") {
-                    console.warn(`⚠️ Could not remove file ${file}:`, error);
+        // Remove only ZIP files (Playwright traces), keep reports
+        files
+            .filter((file) => file.endsWith(".zip"))
+            .forEach((file) => {
+                const filePath = path.join(testResultsDir, file);
+                try {
+                    fs.unlinkSync(filePath);
+                } catch (fileError) {
+                    // File might have been deleted by another process, continue
+                    const error = fileError as { code?: string };
+                    if (error.code !== "ENOENT") {
+                        console.warn(`⚠️ Could not remove ZIP file ${file}:`, error);
+                    }
                 }
-            }
-        });
+            });
     } catch (error: unknown) {
         // Handle directory-level errors
         const errorWithCode = error as { code?: string; message?: string };

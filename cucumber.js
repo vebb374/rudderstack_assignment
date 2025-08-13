@@ -3,6 +3,7 @@ export default {
   import: ['features/**/*.steps.ts', 'features/shared/**/*.ts'],
   format: [
     'progress-bar',
+    'json:test-results/cucumber-report.json',
     'html:test-results/cucumber-report.html',
   ],
   // dryRun: true,
