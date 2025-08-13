@@ -1,20 +1,34 @@
 import { Page } from "playwright";
 
 /**
- * Simple static factory for page objects with caching
+ * Instance-based page factory for proper page object caching
+ * Each browser context gets its own factory instance to avoid cross-test contamination
  */
 export class PageFactory {
-    private static cache = new Map<string, object>();
+    private cache = new Map<string, unknown>();
 
-    static get<T>(page: Page, PageClass: new (page: Page) => T): T {
-        const key = PageClass.name;
-        if (!this.cache.has(key)) {
-            this.cache.set(key, new PageClass(page));
-        }
-        return this.cache.get(key);
+    constructor(private page: Page) {
+        // Page is guaranteed to exist due to TypeScript typing
     }
 
-    static clear(): void {
+    get<T>(PageClass: new (page: Page) => T): T {
+        const key = PageClass.name;
+        if (!this.cache.has(key)) {
+            this.cache.set(key, new PageClass(this.page));
+        }
+        return this.cache.get(key) as T;
+    }
+
+    clear(): void {
         this.cache.clear();
+    }
+
+    /**
+     * Update the page reference and clear cache when page changes
+     * This ensures page objects use the correct page instance
+     */
+    updatePage(newPage: Page): void {
+        this.page = newPage;
+        this.clear(); // Clear cache when page changes
     }
 }

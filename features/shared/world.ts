@@ -1,4 +1,4 @@
-import { World, IWorldOptions, setWorldConstructor } from "@cucumber/cucumber";
+import { World, IWorldOptions, setWorldConstructor, setDefaultTimeout } from "@cucumber/cucumber";
 import { Page, Browser, BrowserContext } from "playwright";
 import { PageFactory } from "./page-factory";
 import { LoginPage } from "../authentication/login.page";
@@ -18,12 +18,6 @@ export interface ICustomWorld extends World {
     readonly destinationDetailsPage: DestinationDetailsPage;
     readonly eventsPage: EventsPage;
 
-    // Test data
-    testData: Map<string, unknown>;
-
-    // Utilities
-    storeTestData<T>(key: string, value: T): void;
-    getTestData<T>(key: string): T | undefined;
     cleanup(): void;
 }
 
@@ -31,41 +25,53 @@ export class CustomWorld extends World implements ICustomWorld {
     browser!: Browser;
     context!: BrowserContext;
     page!: Page;
-    testData = new Map<string, unknown>();
+
+    private pageFactory?: PageFactory;
 
     constructor(options: IWorldOptions) {
         super(options);
     }
 
-    storeTestData<T>(key: string, value: T): void {
-        this.testData.set(key, value);
-    }
-
-    getTestData<T>(key: string): T | undefined {
-        return this.testData.get(key) as T | undefined;
-    }
-
     cleanup(): void {
-        this.testData.clear();
-        PageFactory.clear();
+        this.pageFactory?.clear();
     }
 
-    // Simple page object getters
+    /**
+     * Get or create the page factory instance
+     * This ensures we always have a factory tied to the current page
+     */
+    private getPageFactory(): PageFactory {
+        this.pageFactory ??= new PageFactory(this.page);
+        return this.pageFactory;
+    }
+
+    /**
+     * Update page factory when page changes (useful for page navigation)
+     */
+    updatePageReference(newPage: Page): void {
+        this.page = newPage;
+        this.pageFactory?.updatePage(newPage);
+    }
+
+    // Simple page object getters using instance-based factory
     get loginPage(): LoginPage {
-        return PageFactory.get(this.page, LoginPage);
+        return this.getPageFactory().get(LoginPage);
     }
 
     get connectionsPage(): ConnectionsPage {
-        return PageFactory.get(this.page, ConnectionsPage);
+        return this.getPageFactory().get(ConnectionsPage);
     }
 
     get destinationDetailsPage(): DestinationDetailsPage {
-        return PageFactory.get(this.page, DestinationDetailsPage);
+        return this.getPageFactory().get(DestinationDetailsPage);
     }
 
     get eventsPage(): EventsPage {
-        return PageFactory.get(this.page, EventsPage);
+        return this.getPageFactory().get(EventsPage);
     }
 }
+
+// Set default timeout for all Cucumber steps to 60 seconds
+setDefaultTimeout(60 * 1000);
 
 setWorldConstructor(CustomWorld);

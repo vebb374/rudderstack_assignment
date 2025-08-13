@@ -13,7 +13,6 @@ export class ConnectionsPage {
     // Destinations
     readonly destinationsListSection: Locator;
     readonly destinationCardContainer: (destinationName: string) => Locator;
-    readonly destinationWriteKeyElement: Locator;
 
     // Ask AI Pop Up
     readonly askAIPopUp: Locator;
@@ -46,6 +45,14 @@ export class ConnectionsPage {
     async waitForPageLoad(): Promise<void> {
         await this.page.waitForLoadState();
         await this.pageTitle.waitFor({ state: "visible" });
+
+        try {
+            await this.askAIPopUp.waitFor({ state: "visible", timeout: 2000 });
+            await this.closeAskAIPopUpButton.click();
+            await this.askAIPopUp.waitFor({ state: "hidden" });
+        } catch {
+            return;
+        }
     }
 
     async getDataPlaneUrl(): Promise<string> {

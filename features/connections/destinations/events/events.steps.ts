@@ -29,31 +29,20 @@ When(
 );
 
 Then("the user should see the delivered events count", async function (this: ICustomWorld) {
-    const deliveredCount = await this.eventsPage.getDeliveredEventsCount();
+    const deliveredCount = await this.eventsPage.getMetricValue("Delivered");
     expect(typeof deliveredCount).toBe("number");
     expect(deliveredCount).toBeGreaterThanOrEqual(0);
 });
 
 Then("the user should see the failed events count", async function (this: ICustomWorld) {
-    const failedCount = await this.eventsPage.getFailedEventsCount();
+    const failedCount = await this.eventsPage.getMetricValue("Failed");
     expect(typeof failedCount).toBe("number");
     expect(failedCount).toBeGreaterThanOrEqual(0);
 });
 
 Then("the user should see the failure rate percentage", async function (this: ICustomWorld) {
-    const failureRate = await this.eventsPage.getFailureRate();
-    expect(failureRate).toMatch(/^\d+%$/);
-});
-
-Then("the user should see the events trend chart", async function (this: ICustomWorld) {
-    const isChartVisible = await this.eventsPage.isEventsTrendChartVisible();
-    expect(isChartVisible).toBe(true);
-});
-
-Then("the event metrics should be updated", async function (this: ICustomWorld) {
-    // Verify that the refresh functionality works by checking if the latency alert is visible
-    const isAlertVisible = await this.eventsPage.isMetricsLatencyAlertVisible();
-    expect(isAlertVisible).toBe(true);
+    const failureRate = await this.eventsPage.getMetricValue("Failure rate");
+    expect(failureRate).toBeGreaterThanOrEqual(0);
 });
 
 Then(

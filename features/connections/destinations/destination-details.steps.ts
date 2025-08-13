@@ -1,44 +1,19 @@
-import { Given, When, Then } from "@cucumber/cucumber";
+import { Given, Then, When } from "@cucumber/cucumber";
 import { expect } from "playwright/test";
-import { ICustomWorld } from "../../shared/world";
+import { ICustomWorld } from "@features/shared/world";
+import { TabName } from "./destination-details.page";
 
-Given("the user navigates to the webhook destination", async function (this: ICustomWorld) {
-    await this.connectionsPage.clickWebhookDestination();
-    // Factory provides clean access to destination details page
+Given("the user is on the destination details page", async function (this: ICustomWorld) {
+    // User should already be on destination details page from Background steps
+    // Just wait for the page to load and verify we're there
     await this.destinationDetailsPage.waitForPageLoad();
 });
-
-When("the user views the destination details", function (this: ICustomWorld) {
-    // This step is intentionally empty as the user is already viewing the destination details
-});
-
-When("the user clicks on the {string} tab", async function (this: ICustomWorld, tabName: string) {
-    await this.destinationDetailsPage.clickTab(tabName);
-});
-
-When(
-    "the user clicks on the {string} button",
-    async function (this: ICustomWorld, buttonName: string) {
-        if (buttonName.toLowerCase() === "live events") {
-            await this.destinationDetailsPage.clickLiveEvents();
-        } else {
-            throw new Error(`Unknown button: ${buttonName}`);
-        }
-    }
-);
 
 Then(
     "the user should see the destination name {string}",
     async function (this: ICustomWorld, expectedName: string) {
         const actualName = await this.destinationDetailsPage.getDestinationName();
         expect(actualName).toBe(expectedName);
-    }
-);
-
-Then(
-    "the user should see the destination type {string}",
-    async function (this: ICustomWorld, _expectedType: string) {
-        await expect(this.destinationDetailsPage.destinationType).toBeVisible();
     }
 );
 
@@ -53,27 +28,24 @@ Then(
 );
 
 Then(
-    "the user should see the connected source {string}",
-    async function (this: ICustomWorld, _expectedSource: string) {
-        await expect(this.destinationDetailsPage.connectedSource).toBeVisible();
+    "the user is able to see different tabs in destination details page",
+    async function (this: ICustomWorld) {
+        const sourcesTab = this.destinationDetailsPage.tabLabel("Sources");
+        await expect(sourcesTab).toBeVisible();
+        const eventsTab = this.destinationDetailsPage.tabLabel("Events");
+        await expect(eventsTab).toBeVisible();
+        const configurationTab = this.destinationDetailsPage.tabLabel("Configuration");
+        await expect(configurationTab).toBeVisible();
+        const settingsTab = this.destinationDetailsPage.tabLabel("Settings");
+        await expect(settingsTab).toBeVisible();
     }
 );
 
-Then("the user should see the sources tab content", async function (this: ICustomWorld) {
-    const isVisible = await this.destinationDetailsPage.isTabContentVisible("sources");
-    expect(isVisible).toBe(true);
-});
+// common steps
 
-Then("the user should see the events tab content", async function (this: ICustomWorld) {
-    const isVisible = await this.destinationDetailsPage.isTabContentVisible("events");
-    expect(isVisible).toBe(true);
-});
-
-Then("the user should see the configuration tab content", async function (this: ICustomWorld) {
-    const isVisible = await this.destinationDetailsPage.isTabContentVisible("configuration");
-    expect(isVisible).toBe(true);
-});
-
-Then("the user should be on the live events page", async function (this: ICustomWorld) {
-    await expect(this.page!).toHaveURL(/.*\/live\/.*/);
-});
+When(
+    "the user clicks on the {string} tab in destination details page",
+    async function (this: ICustomWorld, tabName: string) {
+        await this.destinationDetailsPage.clickTab(tabName as TabName);
+    }
+);

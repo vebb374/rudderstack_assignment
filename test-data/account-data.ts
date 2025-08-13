@@ -1,10 +1,10 @@
 import { RudderStackAccount } from "./accounts/account-interface";
-import discripProductionAccount from "./accounts/discrip-production-account";
+import dummyCompanyAccount from "./accounts/dummy-company-account";
 import stagingTestAccount from "./accounts/staging-test-account";
 
 // Map of all available accounts
 const accounts = {
-    discrip_production: discripProductionAccount,
+    "dummy company": dummyCompanyAccount,
     staging_test: stagingTestAccount,
 } as const;
 

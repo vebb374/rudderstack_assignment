@@ -1,11 +1,11 @@
 import { Page, Locator } from "playwright";
 import { CommonUI } from "@features/common/common-ui.page";
-type TabName = "Sources" | "Events" | "Configuration" | "Settings" | "Transformation";
+export type TabName = "Sources" | "Events" | "Configuration" | "Settings" | "Transformation";
 export class DestinationDetailsPage {
     readonly page: Page;
     readonly commonUI: CommonUI;
     readonly destinationName: Locator;
-    readonly destinationType: Locator;
+
     readonly syncToggleSwitch: Locator;
 
     readonly tabLabel: (tabName: TabName) => Locator;
@@ -13,8 +13,9 @@ export class DestinationDetailsPage {
     constructor(page: Page) {
         this.page = page;
         this.commonUI = new CommonUI(page);
-        this.destinationName = page.getByRole("heading", { level: 3 });
-        this.destinationType = page.locator("text=HTTP Webhook");
+        this.destinationName = page
+            .locator(".dest-syncing-target")
+            .getByRole("heading", { name: "request catcher" });
         this.syncToggleSwitch = page.getByTestId("syncToggleSwitch");
 
         //tabs
@@ -22,7 +23,9 @@ export class DestinationDetailsPage {
     }
 
     async waitForPageLoad(): Promise<void> {
-        await this.page.waitForLoadState("domcontentloaded");
+        // Wait for URL to match destinations pattern (e.g., /destinations/31BPgcHpqmVmaQSpxfpFGPvw6Ct)
+        await this.page.waitForURL(/.*\/destinations\/[a-zA-Z0-9]+/, { timeout: 30000 });
+        await this.page.waitForLoadState("load");
         await this.destinationName.waitFor({ state: "visible" });
     }
 
@@ -32,7 +35,7 @@ export class DestinationDetailsPage {
     }
 
     async isDestinationEnabled(): Promise<boolean> {
-        return (await this.syncToggleSwitch.getAttribute("checked")) === "true";
+        return (await this.syncToggleSwitch.getAttribute("aria-checked")) === "true";
     }
 
     async clickTab(tabName: TabName): Promise<void> {

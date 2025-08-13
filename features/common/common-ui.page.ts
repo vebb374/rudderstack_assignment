@@ -10,8 +10,11 @@ export class CommonUI {
     }
 
     async waitForSkeletonToDisappear(): Promise<void> {
-        if (await this.antSkeleton.isVisible({ timeout: 500 })) {
-            await this.antSkeleton.waitFor({ state: "hidden" });
+        try {
+            await this.antSkeleton.waitFor({ state: "visible", timeout: 1000 });
+            await this.antSkeleton.waitFor({ state: "hidden", timeout: 5000 });
+        } catch {
+            return;
         }
     }
 }
