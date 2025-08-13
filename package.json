@@ -4,9 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "npm run test:prod",
+    "test": "npm run test:production",
     "test:staging": "cross-env ENV=staging NODE_OPTIONS=\"--import tsx\" cucumber-js",
-    "test:prod": "cross-env ENV=production NODE_OPTIONS=\"--import tsx\" cucumber-js",
+    "test:production": "cross-env ENV=production NODE_OPTIONS=\"--import tsx\" cucumber-js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

@@ -45,10 +45,10 @@ jobs:
     test:
         needs: code-quality
         runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                environment: [staging, production]
+        # strategy:
+        #     fail-fast: false
+        #     matrix:
+        #         environment: [staging, production]
 
         steps:
             - name: Checkout repository
@@ -66,8 +66,8 @@ jobs:
             - name: Install Playwright browsers
               run: npx playwright install --with-deps chromium
 
-            - name: Run E2E tests (${{ matrix.environment }})
-              run: npm run test:${{ matrix.environment }}
+            - name: Run E2E tests (${{ github.event.inputs.environment || 'production' }})
+              run: npm run test:${{ github.event.inputs.environment || 'production' }}
               env:
                   CI: true
               continue-on-error: true
@@ -76,7 +76,7 @@ jobs:
               uses: actions/upload-artifact@v4
               if: always()
               with:
-                  name: test-results-${{ matrix.environment }}
+                  name: test-results-${{ github.event.inputs.environment || 'production' }}
                   path: |
                       test-results/
                   retention-days: 30
@@ -85,7 +85,7 @@ jobs:
               uses: actions/upload-artifact@v4
               if: always()
               with:
-                  name: cucumber-report-${{ matrix.environment }}
+                  name: cucumber-report-${{ github.event.inputs.environment || 'production' }}
                   path: test-results/cucumber-report.html
                   retention-days: 30
 
