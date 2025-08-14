@@ -1,5 +1,5 @@
 import { World, IWorldOptions, setWorldConstructor, setDefaultTimeout } from "@cucumber/cucumber";
-import { Page, Browser, BrowserContext } from "playwright";
+import { Page, Browser, BrowserContext, APIRequestContext } from "playwright";
 import { PageFactory } from "./page-factory";
 import { LoginPage } from "../authentication/login.page";
 import { ConnectionsPage } from "../connections/connections.page";
@@ -11,6 +11,7 @@ export interface ICustomWorld extends World {
     browser: Browser;
     context: BrowserContext;
     page: Page;
+    apiContext: APIRequestContext;
 
     // Page objects (lazy loaded)
     readonly loginPage: LoginPage;
@@ -28,6 +29,7 @@ export class CustomWorld extends World implements ICustomWorld {
     browser!: Browser;
     context!: BrowserContext;
     page!: Page;
+    apiContext!: APIRequestContext;
 
     private pageFactory?: PageFactory;
 

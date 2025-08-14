@@ -15,7 +15,7 @@ export const setupEnvironment = (): void => {
 export const getEnvironmentConfig = () => {
     return {
         baseUrl: process.env.BASE_URL ?? "https://app.rudderstack.com",
-        headless: process.env.HEADLESS ?? true,
+        headless: process.env.HEADLESS !== "false", // Explicit boolean conversion
         slowMo: process.env.SLOW_MO ? parseInt(process.env.SLOW_MO) : 0,
         timeout: process.env.TIMEOUT ? parseInt(process.env.TIMEOUT) : 30000,
     };

@@ -1,15 +1,15 @@
-import { request } from "playwright";
+import { APIRequestContext } from "playwright";
 import { EventFactory } from "../../test-data";
 import { getAccountData, type AccountKey } from "../../test-data/account-data";
+import { ICustomWorld } from "./world";
 
 export async function sendTrackEvent(
+    context: APIRequestContext,
     dataPlaneUrl: string,
     writeKey: string,
     eventName: string,
     userId?: string
 ): Promise<void> {
-    const context = await request.newContext();
-
     try {
         // Use EventFactory to create consistent test data
         const eventData = EventFactory.createTrackEvent({
@@ -34,19 +34,16 @@ export async function sendTrackEvent(
     } catch (error) {
         console.error(`Failed to send track event: ${error}`);
         throw error;
-    } finally {
-        await context.dispose();
     }
 }
 
 export async function sendIdentifyEvent(
+    context: APIRequestContext,
     dataPlaneUrl: string,
     writeKey: string,
     userId: string,
     traits: Record<string, unknown> = {}
 ): Promise<void> {
-    const context = await request.newContext();
-
     try {
         // Use EventFactory to create consistent test data
         const eventData = EventFactory.createIdentifyEvent({
@@ -71,8 +68,6 @@ export async function sendIdentifyEvent(
     } catch (error) {
         console.error(`Failed to send identify event: ${error}`);
         throw error;
-    } finally {
-        await context.dispose();
     }
 }
 
@@ -81,6 +76,7 @@ export async function sendIdentifyEvent(
  * Simplified API following AuQA pattern
  */
 export async function sendTrackEventForAccount(
+    world: ICustomWorld,
     accountKey: AccountKey,
     eventName: string,
     userId?: string
@@ -92,6 +88,7 @@ export async function sendTrackEventForAccount(
     }
 
     await sendTrackEvent(
+        world.apiContext,
         account.dataPlaneUrl,
         account.sources.httpSource.writeKey,
         eventName,

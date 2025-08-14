@@ -24,7 +24,7 @@ When(
     "the user sends a {string} event to the source via API",
     async function (this: ICustomWorld, eventName: string) {
         // Simple, direct approach - no need to capture from UI
-        await sendTrackEventForAccount("dummy company", eventName);
+        await sendTrackEventForAccount(this, "dummy company", eventName);
     }
 );
 

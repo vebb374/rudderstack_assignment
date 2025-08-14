@@ -1,7 +1,7 @@
 import { Before, After, BeforeAll } from "@cucumber/cucumber";
-import { chromium } from "playwright";
+import { chromium, request } from "playwright";
 import { ICustomWorld } from "./world";
-import { setupEnvironment } from "./env";
+import { getEnvironmentConfig, setupEnvironment } from "./env";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -61,6 +61,8 @@ BeforeAll(() => {
 });
 
 Before(async function (this: ICustomWorld) {
+    const config = getEnvironmentConfig();
+
     // Ensure test-results directory exists
     const testResultsDir = path.join(process.cwd(), "test-results");
     if (!fs.existsSync(testResultsDir)) {
@@ -68,13 +70,14 @@ Before(async function (this: ICustomWorld) {
     }
 
     this.browser = await chromium.launch({
-        headless: process.env.HEADLESS !== "true",
-        slowMo: process.env.SLOW_MO ? parseInt(process.env.SLOW_MO) : 0,
+        headless: config.headless,
+        slowMo: config.slowMo,
     });
 
     this.context = await this.browser.newContext({
         viewport: { width: 1280, height: 720 },
     });
+    this.apiContext = await request.newContext();
 
     // Start tracing
     await this.context.tracing.start({
@@ -126,6 +129,7 @@ After(async function (this: ICustomWorld, scenario) {
         }
         await this.context.close();
         await this.browser.close();
+        await this.apiContext.dispose();
     } catch (error) {
         console.warn("Error during cleanup:", error);
     }
